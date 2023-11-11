@@ -15,6 +15,13 @@ public partial class LevelCell : Node2D
 	[Export]
 	public int Height = 64;
 
+	public LevelCell(LevelManager manager){
+		TileHeight = manager.TileHeight;
+		TileWidth = manager.TileWidth;
+		Width = manager.CellWidth;
+		Height  = manager.CellHeight;
+	}
+
 	public List<TileMap> TileMaps = new List<TileMap>();
 	private bool[,] Solid;
 	// Called when the node enters the scene tree for the first time.
@@ -62,4 +69,8 @@ public partial class LevelCell : Node2D
 		}
 		return valid;
 	}
+
+	/*public byte[] Serialize(){
+		
+	}*/
 }

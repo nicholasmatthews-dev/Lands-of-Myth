@@ -40,7 +40,7 @@ public partial class LevelManager : Node2D
 				currentLevel.AddChild(currentMap);
 				currentLevel.TileMaps.Add(currentMap);
 				currentMap.TileSet = tileSet;
-				currentMap.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
+				currentLevel.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
 				if ((i + j) % 2 == 0){
 					PopulateTiles(currentMap, new Vector2I(0,0));
 				}
@@ -72,7 +72,6 @@ public partial class LevelManager : Node2D
             {
                 cellCoords[1]
             };
-			//Debug.Print("Checking if cell position " + cellCoords[0] + " at " + cellCoords[1] + " is valid.");
 			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
 		}
 		return valid;
@@ -89,24 +88,33 @@ public partial class LevelManager : Node2D
 		List<Vector2I> output = new List<Vector2I>();
 		
 		//Calculates the appropriate cell that coords lies in
-		int cellX = (int)Mathf.Floor(coords.X * 1.0f / CellWidth);
-		int cellY = (int)Mathf.Floor(coords.Y * 1.0f / CellHeight);
+		int cellX = FloorDivision(coords.X, CellWidth);
+		int cellY = FloorDivision(coords.Y, CellHeight);
 		Vector2I cellPosition = new Vector2I(cellX, cellY);
 		
 		//Calculates the coordinates relative to the origin of the cell coords lies in
 		int localX = coords.X % CellWidth;
 		if (localX < 0){
-			localX = localX + CellWidth;
+			localX += CellWidth;
 		}
 		int localY = coords.Y % CellHeight;
 		if (localY < 0){
-			localY = localY + CellHeight;
+			localY += CellHeight;
 		}
 		Vector2I localPosition = new Vector2I(localX, localY);
 		
 		output.Add(cellPosition);
 		output.Add(localPosition);
 		return output;
+	}
+
+	private int FloorDivision(int a, int b){
+		if (((a < 0) || (b < 0)) && (a % b != 0)){
+			return (a / b - 1);
+		}
+		else {
+			return (a / b);
+		}
 	}
 
 	private void PopulateTiles(TileMap input, Vector2I fill){
@@ -116,4 +124,5 @@ public partial class LevelManager : Node2D
 			}
 		}
 	}
+	
 }

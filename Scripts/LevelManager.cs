@@ -10,49 +10,53 @@ public partial class LevelManager : Node2D
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>
 	public int TileHeight = 16;
+
 	/// <summary>
 	/// The width of a signle tile in the tileset (in pixels).
 	/// </summary>
 	public int TileWidth = 16;
+
 	/// <summary>
 	/// The height of a single map cell (in tiles).
 	/// </summary>
 	public int CellHeight = 64;
+
 	/// <summary>
 	/// The width of a single map cell (in tiles).
 	/// </summary>
 	public int CellWidth = 64;
+
+	private TileSetManager tilesetManager;
+
 	/// <summary>
 	/// The collection of active map cells, 
 	/// indexed by their position (counted by number of cells from the origin).
 	/// </summary>
 	private Dictionary<Vector2I,LevelCell> activeCells = new Dictionary<Vector2I, LevelCell>();
+
+	public LevelManager(TileSetManager tileManager) : base(){
+		tilesetManager = tileManager;
+	}
+
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		TileSet tileSet = ResourceLoader.Load<TileSet>("res://Tilesets/Forest.tres");
+		int forestRefId = tilesetManager.GetTileSetCode("Forest");
 		for (int i = -1; i < 2; i++){
 			for (int j = -1; j < 2; j++){
-				LevelCell currentLevel = new LevelCell();
+				LevelCell currentLevel = new LevelCell(this);
 				AddChild(currentLevel);
 				activeCells.Add(new Vector2I(i,j), currentLevel);
-				TileMap currentMap = new TileMap();
-				currentLevel.AddChild(currentMap);
-				currentLevel.TileMaps.Add(currentMap);
-				currentMap.TileSet = tileSet;
+				currentLevel.AddTileSetSource(forestRefId);
 				currentLevel.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
 				if ((i + j) % 2 == 0){
-					PopulateTiles(currentMap, new Vector2I(0,0));
+					PopulateTiles(currentLevel.Tiles, new Vector2I(0,0));
 				}
 				else{
-					PopulateTiles(currentMap, new Vector2I(2,1));
+					PopulateTiles(currentLevel.Tiles, new Vector2I(2,1));
 				}
 				if (i == 0 && j == 0){
-					TileMap houses = (TileMap)ResourceLoader
-					.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
-					.Instantiate();
-					currentLevel.AddChild(houses);
-					currentLevel.TileMaps.Add(houses);
+					AddStructure(currentLevel);
 					currentLevel.CheckSolid();
 				}
 			}
@@ -62,6 +66,10 @@ public partial class LevelManager : Node2D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+	public TileSetManager GetTileSetManager(){
+		return tilesetManager;
 	}
 
 	public bool PositionValid(ICollection<Vector2I> occupied){
@@ -121,6 +129,23 @@ public partial class LevelManager : Node2D
 		for (int i = 0; i < CellWidth; i++){
 			for (int j = 0; j < CellHeight; j++){
 				input.SetCell(0, new Vector2I(i,j), 0, fill, 0);
+			}
+		}
+	}
+
+	private void AddStructure(LevelCell input){
+		int buildingsRefId = tilesetManager.GetTileSetCode("Elf_Buildings");
+		input.AddTileSetSource(buildingsRefId);
+		int localTileSetRef = input.GetLocalCode(buildingsRefId);
+		TileMap houses = (TileMap)ResourceLoader
+		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
+		.Instantiate();
+		for (int i = 0; i < CellWidth; i++){
+			for (int j = 0; j < CellWidth; j++){
+				for (int k = 0; k < 2; k++){
+					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
+					input.Tiles.SetCell(k + 1, new Vector2I(i, j), localTileSetRef, atlasCoords);
+				}
 			}
 		}
 	}

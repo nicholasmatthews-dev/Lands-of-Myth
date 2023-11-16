@@ -14,27 +14,28 @@ public partial class LevelCell : Node2D
 	[Export]
 	public int Height = 64;
 
-	public TileMap Tiles = new TileMap();
+	private TileMap tiles = new TileMap();
 	private List<int> tileSets = new List<int>();
+	private Dictionary<int, TileSetTicket> tickets = new Dictionary<int, TileSetTicket>();
 	private Dictionary<int, int> localCodes = new Dictionary<int, int>();
-	private LevelManager levelManager;
+	private TileSetManager tileSetManager;
 	private bool[,] Solid;
 
 	public LevelCell(LevelManager manager) : base(){
-		levelManager = manager;
+		tileSetManager = manager.GetTileSetManager();
 		TileHeight = manager.TileHeight;
 		TileWidth = manager.TileWidth;
 		Width = manager.CellWidth;
 		Height  = manager.CellHeight;
-		Tiles.TileSet = manager.GetTileSetManager().GetDefaultTileSet();
-		Tiles.AddLayer(-1);
-		Tiles.AddLayer(-1);
+		tiles.TileSet = tileSetManager.GetDefaultTileSet();
+		tiles.AddLayer(-1);
+		tiles.AddLayer(-1);
 	}
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		AddChild(Tiles);
+		AddChild(tiles);
 		Solid = new bool[Width,Height];
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
@@ -48,27 +49,11 @@ public partial class LevelCell : Node2D
 	{
 	}
 
-	public void AddTileSetSource(int tileSetId){
-		if (tileSets.Contains(tileSetId)){
-			return;
-		}
-		TileSetManager tileManager = levelManager.GetTileSetManager();
-		try {
-			TileSetSource toAdd = tileManager.GetTileSetSource(tileSetId);
-			tileSets.Add(tileSetId);
-			localCodes.Add(tileSetId, tileSets.Count - 1);
-			Tiles.TileSet.AddSource(toAdd, tileSets.Count - 1);
-		}
-		catch (Exception e) {
-			Debug.Print(e.Message);
-		}
-	}
-
 	public void CheckSolid(){
 		for (int i=0; i < Width; i++){
 			for (int j=0; j < Height; j++){
-				for (int k=0; k < Tiles.GetLayersCount(); k++){
-					TileData cellData = Tiles.GetCellTileData(k, new Vector2I(i,j));
+				for (int k=0; k < tiles.GetLayersCount(); k++){
+					TileData cellData = tiles.GetCellTileData(k, new Vector2I(i,j));
 					if (cellData is null){
 						break;
 					}
@@ -100,6 +85,26 @@ public partial class LevelCell : Node2D
 			+ " not found in tileset sources.");
 		}
 		return localCodes[tileSetRef];
+	}
+
+	public void Place(int layer, int tileSetRef, Vector2I coords, Vector2I atlasCoords){
+		if (!tickets.ContainsKey(tileSetRef)){
+			AddTicket(tileSetRef);
+		}
+		tiles.SetCell
+		(
+			layer, 
+			coords, 
+			tickets[tileSetRef].GetAtlasId(),
+			atlasCoords
+		);
+	}
+
+	private void AddTicket(int tileSetRef){
+		TileSetTicket tileSetTicket = tileSetManager.GetTileSetTicket(tileSetRef);
+		tickets.Add(tileSetRef, tileSetTicket);
+		tileSets.Add(tileSetRef);
+		localCodes.Add(tileSetRef, tileSets.Count - 1);
 	}
 
 	/*public byte[] Serialize(){

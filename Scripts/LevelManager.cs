@@ -47,13 +47,12 @@ public partial class LevelManager : Node2D
 				LevelCell currentLevel = new LevelCell(this);
 				AddChild(currentLevel);
 				activeCells.Add(new Vector2I(i,j), currentLevel);
-				currentLevel.AddTileSetSource(forestRefId);
 				currentLevel.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
 				if ((i + j) % 2 == 0){
-					PopulateTiles(currentLevel.Tiles, new Vector2I(0,0));
+					PopulateTiles(currentLevel, new Vector2I(0,0), forestRefId);
 				}
 				else{
-					PopulateTiles(currentLevel.Tiles, new Vector2I(2,1));
+					PopulateTiles(currentLevel, new Vector2I(2,1), forestRefId);
 				}
 				if (i == 0 && j == 0){
 					AddStructure(currentLevel);
@@ -116,7 +115,7 @@ public partial class LevelManager : Node2D
 		return output;
 	}
 
-	private int FloorDivision(int a, int b){
+	private static int FloorDivision(int a, int b){
 		if (((a < 0) || (b < 0)) && (a % b != 0)){
 			return (a / b - 1);
 		}
@@ -125,18 +124,16 @@ public partial class LevelManager : Node2D
 		}
 	}
 
-	private void PopulateTiles(TileMap input, Vector2I fill){
+	private void PopulateTiles(LevelCell input, Vector2I fill, int tileSetRef){
 		for (int i = 0; i < CellWidth; i++){
 			for (int j = 0; j < CellHeight; j++){
-				input.SetCell(0, new Vector2I(i,j), 0, fill, 0);
+				input.Place(0, tileSetRef, new Vector2I(i, j), fill);
 			}
 		}
 	}
 
 	private void AddStructure(LevelCell input){
 		int buildingsRefId = tilesetManager.GetTileSetCode("Elf_Buildings");
-		input.AddTileSetSource(buildingsRefId);
-		int localTileSetRef = input.GetLocalCode(buildingsRefId);
 		TileMap houses = (TileMap)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
 		.Instantiate();
@@ -144,10 +141,11 @@ public partial class LevelManager : Node2D
 			for (int j = 0; j < CellWidth; j++){
 				for (int k = 0; k < 2; k++){
 					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-					input.Tiles.SetCell(k + 1, new Vector2I(i, j), localTileSetRef, atlasCoords);
+					input.Place(k + 1, buildingsRefId, new Vector2I(i, j), atlasCoords);
 				}
 			}
 		}
+		houses.Free();
 	}
-	
+
 }

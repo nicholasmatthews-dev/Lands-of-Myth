@@ -28,6 +28,7 @@ public partial class Main : Node2D
 		movement.Target = character;
 		movement.ActiveLevel = levelManager;
 		
+		AddChild(tileSetManager);
 		AddChild(levelManager);
 		AddChild(character);
 		AddChild(movement);

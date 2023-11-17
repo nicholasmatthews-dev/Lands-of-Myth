@@ -57,6 +57,7 @@ public partial class LevelManager : Node2D
 				if (i == 0 && j == 0){
 					AddStructure(currentLevel);
 					currentLevel.CheckSolid();
+					currentLevel.Serialize();
 				}
 			}
 		}

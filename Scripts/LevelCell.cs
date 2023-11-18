@@ -104,20 +104,115 @@ public partial class LevelCell : Node2D
 		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count));
 		int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
 		int sourceLibraryBytes = uniqueTiles.Count * (4 + 4 + 4) + 4;
+		uint bitMask = (uint)((1 << tileBits) - 1);
 		Debug.Print("There are " + uniqueTiles.Count + " unique tiles.");
 		Debug.Print("It will take " + tileBits + " bits to encode each tile.");
 		Debug.Print("It will take " + totalTileBytes + " Bytes to encode all tiles.");
 		Debug.Print("It will take " + sourceLibraryBytes + " Bytes to encode the sources.");
 		Debug.Print("The estimate for the total uncompressed size of this tile is " 
 		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");
-		/*for (int i = 0; i < Width; i++){
-			for (int j = 0; j < Height; j++){
-				for (int k = 0; k < numLayers; k++){
+		Debug.Print("The bit mask is " + Convert.ToString(bitMask, toBase: 2));
+		List<uint> tileCodes = GetTilesAsCodeArray(uniqueTiles);
+		return new byte[1];
+	}
 
+	private List<uint> GetTilesAsCodeArray(Dictionary<(int, Vector2I), int> uniqueTiles){
+		List<uint> tileCodes = new List<uint>();
+		for (int i = 0; i < numLayers; i++){
+			for (int j = 0; j < Width; j++){
+				for (int k = 0; k < Height; k++){
+					(int, Vector2I) tileIdentifier = GetTileIdentifier(k, new Vector2I(j, k));
+					uint currentCode = (uint)uniqueTiles[tileIdentifier];
+					tileCodes.Add(currentCode);
 				}
 			}
-		}*/
-		return new byte[1];
+		}
+		return tileCodes;
+	}
+
+	private byte[] ConvertCodesToBytes(List<uint> input, int codeSize){
+		if (codeSize < 1){
+			throw new ArgumentException("Code size " + codeSize + " is less than 1.");
+		}
+		if (input.Count <= 0){
+			throw new ArgumentException("Invalid input list size.");
+		}
+		int numBytes;
+		if (codeSize * input.Count % 8 == 0){
+			numBytes = input.Count * codeSize / 8;
+		}
+		else {
+			numBytes = input.Count * codeSize / 8 + 1;
+		}
+		byte[] output = new byte[numBytes];
+		byte currentByte = 0;
+		uint currentCode = input[0];
+		int byteCount = 0;
+		int codeCount = 0;
+		int byteOffSet = 7;
+		int codeOffSet = codeSize - 1;
+		while (codeCount < input.Count){
+			// There are more bits in the code than a single byte.
+			if (byteOffSet < codeOffSet){
+				// Shift the current code to align with the current byte head, deleting all lower order bits.
+				uint tempCode = currentCode;
+				tempCode >>= codeOffSet - byteOffSet;
+				
+				// Add the bits into the current byte and pass it into the array
+				currentByte += (byte)tempCode;
+				output[byteCount] = currentByte;
+				byteCount++;
+				currentByte = 0;
+				
+				// Shift the bits in tempCode back into place, then remove them
+				tempCode <<= codeOffSet - byteOffSet;
+				currentCode -= tempCode;
+
+				// Move the heads of the current Byte and current code back into place
+				codeOffSet -= byteOffSet + 1;
+				byteOffSet = 7;
+			}
+			// The current code contains exactly the remaining bits for the current byte (how nice!).
+			else if (byteOffSet == codeOffSet){
+				// Add the bits into the current byte and pass it into the array
+				currentByte += (byte)currentCode;
+				output[byteCount] = currentByte;
+				byteCount++;
+				currentByte = 0;
+
+				// No need to pull out a new value if we are at the end of the list
+				if (codeCount == input.Count - 1){
+					break;
+				}
+
+				// Get the next code and reset the offsets.
+				codeCount++;
+				currentCode = input[codeCount];
+				codeOffSet = codeSize - 1;
+				byteOffSet = 7;
+			}
+			// There aren't enough bits available to fill a whole byte
+			else if (byteOffSet > codeOffSet){
+				// Shift the current code to align with the byte offset
+				currentCode <<= byteOffSet - codeOffSet;
+
+				// Adds the available bits to the current byte and shifts the byte offset
+				currentByte += (byte)currentCode;
+				byteOffSet = byteOffSet - codeOffSet - 1;
+
+				// If this is the last code, add the byte as is and break
+				if (codeCount == input.Count - 1){
+					output[byteCount] = currentByte;
+					break;
+				}
+
+				// Retrieve the next code in the list and update the code offset
+				codeCount++;
+				currentCode = input[codeCount];
+				codeOffSet = codeSize - 1;
+			}
+		}
+		return output;
 	}
 
 	private (int, Vector2I) GetTileIdentifier(int layer, Vector2I coords){

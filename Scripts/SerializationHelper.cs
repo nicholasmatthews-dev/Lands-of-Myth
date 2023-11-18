@@ -2,6 +2,18 @@ using System;
 using System.Collections.Generic;
 
 public static class SerializationHelper {
+	/// <summary>
+	/// Converts a list of integers with specified bit length into a list of
+	/// integers with a different bit length.
+	/// </summary>
+	/// <param name="input">The list of integers to be converted.</param>
+	/// <param name="inputBits">The length in bits of the integers in the input list.</param>
+	/// <param name="outputBits">The length of bits for the integers in the output list.</param>
+	/// <param name="expectFullWords">If <c>True</c> then any remaining bits less than a 
+	/// full output word will be discarded.</param>
+	/// <returns>A list of integers in which each contains <c>outputBits</c> bits.</returns>
+	/// <exception cref="ArgumentException">If the list is empty, or if input or output 
+	/// bits are less than 1.</exception>
     public static List<int> ConvertBetweenCodes
 	(
 		List<int> input, 

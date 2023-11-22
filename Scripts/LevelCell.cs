@@ -141,7 +141,16 @@ public partial class LevelCell : Node2D
 		Debug.Print("It will take " + sourceLibraryBytes + " Bytes to encode the sources.");
 		Debug.Print("The estimate for the total uncompressed size of this tile is " 
 		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");
-		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
+		//List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
+		/*List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
+		List<(int, List<Vector2I>)> headerDecoded = DecodeTileSourceHeader(headerEncoded);
+		foreach ((int, List<Vector2I>) source in headerDecoded){
+			Debug.Print("---------------------------------------------------------------------------");
+			Debug.Print("Tileset source with ref id: " + source.Item1 + " has the following tiles: ");
+			foreach (Vector2I tile in source.Item2){
+				Debug.Print(tile.ToString());
+			}
+		}*/
 		return new byte[1];
 	}
 
@@ -164,7 +173,26 @@ public partial class LevelCell : Node2D
 	}
 
 	private List<(int, List<Vector2I>)> DecodeTileSourceHeader(List<byte> bytes){
-		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(0, 4).ToArray());
+		int readHead = 0;
+		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
+		readHead += 4;
+		List<(int, List<Vector2I>)> output = new List<(int, List<Vector2I>)>(sourcesCount);
+		for (int i = 0; i < sourcesCount; i++){
+			int tileId = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
+			readHead += 4;
+			int uniqueTiles = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
+			readHead += 4;
+			List<Vector2I> tileList = new List<Vector2I>();
+			for (int j = 0; j < uniqueTiles; j++){
+				int X = bytes[readHead];
+				readHead++;
+				int Y = bytes[readHead];
+				readHead++;
+				tileList.Add(new Vector2I(X,Y));
+			}
+			output.Add((tileId, tileList));
+		}
+		return output;
 	}
 
 	/// <summary>

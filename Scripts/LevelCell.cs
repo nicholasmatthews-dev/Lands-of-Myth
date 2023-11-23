@@ -132,15 +132,15 @@ public partial class LevelCell : Node2D
 	public byte[] Serialize(){
 		List<(int, List<Vector2I>)> tileSetSources = GetUniqueTileList();
 		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSetSources);
-		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count + 1));
-		int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
+		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count));
+		/*int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
 		int sourceLibraryBytes = 4 + 8 * tileSetSources.Count + uniqueTiles.Count * 2;
 		Debug.Print("There are " + uniqueTiles.Count + " unique tiles.");
 		Debug.Print("It will take " + tileBits + " bits to encode each tile.");
 		Debug.Print("It will take " + totalTileBytes + " Bytes to encode all tiles.");
 		Debug.Print("It will take " + sourceLibraryBytes + " Bytes to encode the sources.");
 		Debug.Print("The estimate for the total uncompressed size of this tile is " 
-		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");
+		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");*/
 		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
 		List<int> tileCodes8Bit = SerializationHelper.ConvertBetweenCodes(tileCodes, tileBits, 8);
 		List<byte> tileCodesBytes = new List<byte>(tileCodes8Bit.Count);
@@ -148,8 +148,8 @@ public partial class LevelCell : Node2D
 			tileCodesBytes.Add((byte)entry);
 		}
 		List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
-		Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
-		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");
+		/*Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
+		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");*/
 		List<byte> outputList = new List<byte>(tileCodesBytes.Count + headerEncoded.Count);
 		outputList.AddRange(headerEncoded);
 		outputList.AddRange(tileCodesBytes);

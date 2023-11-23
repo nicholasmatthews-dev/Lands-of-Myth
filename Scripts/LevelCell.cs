@@ -132,26 +132,28 @@ public partial class LevelCell : Node2D
 	public byte[] Serialize(){
 		List<(int, List<Vector2I>)> tileSetSources = GetUniqueTileList();
 		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSetSources);
-		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count));
+		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count + 1));
 		int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
-		int sourceLibraryBytes = uniqueTiles.Count * (4 + 1 + 1) + 4;
+		int sourceLibraryBytes = 4 + 8 * tileSetSources.Count + uniqueTiles.Count * 2;
 		Debug.Print("There are " + uniqueTiles.Count + " unique tiles.");
 		Debug.Print("It will take " + tileBits + " bits to encode each tile.");
 		Debug.Print("It will take " + totalTileBytes + " Bytes to encode all tiles.");
 		Debug.Print("It will take " + sourceLibraryBytes + " Bytes to encode the sources.");
 		Debug.Print("The estimate for the total uncompressed size of this tile is " 
 		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");
-		//List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
-		/*List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
-		List<(int, List<Vector2I>)> headerDecoded = DecodeTileSourceHeader(headerEncoded);
-		foreach ((int, List<Vector2I>) source in headerDecoded){
-			Debug.Print("---------------------------------------------------------------------------");
-			Debug.Print("Tileset source with ref id: " + source.Item1 + " has the following tiles: ");
-			foreach (Vector2I tile in source.Item2){
-				Debug.Print(tile.ToString());
-			}
-		}*/
-		return new byte[1];
+		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
+		List<int> tileCodes8Bit = SerializationHelper.ConvertBetweenCodes(tileCodes, tileBits, 8);
+		List<byte> tileCodesBytes = new List<byte>(tileCodes8Bit.Count);
+		foreach (int entry in tileCodes8Bit){
+			tileCodesBytes.Add((byte)entry);
+		}
+		List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
+		Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
+		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");
+		List<byte> outputList = new List<byte>(tileCodesBytes.Count + headerEncoded.Count);
+		outputList.AddRange(headerEncoded);
+		outputList.AddRange(tileCodesBytes);
+		return outputList.ToArray();
 	}
 
 	private List<byte> EncodeTileSourceHeader(List<(int, List<Vector2I>)> tileSources){

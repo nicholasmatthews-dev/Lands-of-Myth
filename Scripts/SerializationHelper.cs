@@ -112,4 +112,8 @@ public static class SerializationHelper {
 		return output;
 	}
 
+	public static int RepresentativeBits(int input){
+		return (int)Math.Ceiling(Math.Log2(input));
+	}
+
 }

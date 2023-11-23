@@ -57,7 +57,6 @@ public partial class LevelManager : Node2D
 				if (i == 0 && j == 0){
 					AddStructure(currentLevel);
 					currentLevel.CheckSolid();
-					currentLevel.Serialize();
 				}
 			}
 		}
@@ -147,6 +146,21 @@ public partial class LevelManager : Node2D
 			}
 		}
 		houses.Free();
+	}
+
+	public byte[] SaveCell(Vector2I coords){
+		LevelCell toSave = activeCells[TranslateCoords(coords)[0]];
+		return toSave.Serialize();
+	}
+
+	public void LoadCell(Vector2I coords, byte[] toLoad){
+		Vector2I cellCoords = TranslateCoords(coords)[0];
+		LevelCell toDispose = activeCells[cellCoords];
+		activeCells.Remove(cellCoords);
+		toDispose.Free();
+		LevelCell newCell = LevelCell.Deserialize(toLoad, this);
+		activeCells.Add(cellCoords, newCell);
+		AddChild(newCell);
 	}
 
 }

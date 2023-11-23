@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 public partial class LevelCell : Node2D
 {
@@ -132,7 +133,7 @@ public partial class LevelCell : Node2D
 	public byte[] Serialize(){
 		List<(int, List<Vector2I>)> tileSetSources = GetUniqueTileList();
 		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSetSources);
-		int tileBits = (int)Math.Ceiling(Math.Log2(uniqueTiles.Count));
+		int tileBits = SerializationHelper.RepresentativeBits(uniqueTiles.Count);
 		/*int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
 		int sourceLibraryBytes = 4 + 8 * tileSetSources.Count + uniqueTiles.Count * 2;
 		Debug.Print("There are " + uniqueTiles.Count + " unique tiles.");
@@ -156,6 +157,29 @@ public partial class LevelCell : Node2D
 		return outputList.ToArray();
 	}
 
+	public static LevelCell Deserialize(byte[] input, LevelManager manager){
+		LevelCell output = new LevelCell(manager);
+		List<byte> bytes = new List<byte>(input);
+		List<(int, List<Vector2I>)> tileSetSources = DecodeTileSourceHeader(bytes);
+		int totalTiles = 1;
+		foreach ((int, List<Vector2I>) entry in tileSetSources){
+			foreach (Vector2I uniqueTile in entry.Item2){
+				totalTiles++;
+			}
+		}
+		int tileBits = SerializationHelper.RepresentativeBits(totalTiles);
+		List<byte> payload = bytes.GetRange(tileSetSources.Count, bytes.Count - tileSetSources.Count);
+		List<int> payloadInts = new List<int>(payload.Count);
+		foreach (byte entry in payload){
+			payloadInts.Add(entry);
+		}
+		Dictionary<(int, Vector2I), int> tileCodes = GetTileSetCodes(tileSetSources);
+		Dictionary<int, (int, Vector2I)> codesToTiles = tileCodes.ToDictionary((i) => i.Value, (i) => i.Key);
+		List<int> codeList = SerializationHelper.ConvertBetweenCodes(payloadInts, 8, tileBits, true);
+		PlaceTileCodes(output, codesToTiles, codeList);
+		return output;
+	}
+
 	private List<byte> EncodeTileSourceHeader(List<(int, List<Vector2I>)> tileSources){
 		int outputSize = 4  + 8 * tileSources.Count;
 		foreach ((int, List<Vector2I>) tileSource in tileSources){
@@ -174,7 +198,7 @@ public partial class LevelCell : Node2D
 		return output;
 	}
 
-	private List<(int, List<Vector2I>)> DecodeTileSourceHeader(List<byte> bytes){
+	private static List<(int, List<Vector2I>)> DecodeTileSourceHeader(List<byte> bytes){
 		int readHead = 0;
 		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
 		readHead += 4;
@@ -237,6 +261,21 @@ public partial class LevelCell : Node2D
 		return (sourceRef, atlasCoords);
 	}
 
+	private static void PlaceTileCodes
+	(
+		LevelCell toModify, 
+		Dictionary<int, (int, Vector2I)> codesToTiles,
+		List<int> codeList
+	){
+		for (int i = 0; i < codeList.Count; i++){
+			int layer = i / (toModify.Width * toModify.Height);
+			int X = i / toModify.Height % toModify.Width;
+			int Y = i % toModify.Height;
+			(int, Vector2I) currentTile = codesToTiles[codeList[i]];
+			toModify.Place(layer, currentTile.Item1, new Vector2I(X, Y), currentTile.Item2);
+		}
+	}
+
 	/// <summary>
 	/// Returns a list of tuples in which each tileSet is associated with a list of all
 	/// the atlas coords of all the unique tiles which use that tileSet.
@@ -278,7 +317,7 @@ public partial class LevelCell : Node2D
 		return tileSetSourceList;
 	}
 
-	private Dictionary<(int, Vector2I), int> GetTileSetCodes(List<(int, List<Vector2I>)> sourcesList){
+	private static Dictionary<(int, Vector2I), int> GetTileSetCodes(List<(int, List<Vector2I>)> sourcesList){
 		Dictionary<(int, Vector2I), int> tileCodes = GetDefaultTileCodeDictionary();
 		int currentCode = tileCodes.Count;
 		for (int i = 0; i < sourcesList.Count; i++){
@@ -290,7 +329,7 @@ public partial class LevelCell : Node2D
 		return tileCodes;
 	}
 
-	private Dictionary<(int, Vector2I), int> GetDefaultTileCodeDictionary(){
+	private static Dictionary<(int, Vector2I), int> GetDefaultTileCodeDictionary(){
 		Dictionary<(int, Vector2I), int> tileCodes = new Dictionary<(int, Vector2I), int>{
 			{(-1, new Vector2I(-1, -1)), 0}
 		};

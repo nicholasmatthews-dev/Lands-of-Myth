@@ -44,6 +44,7 @@ public partial class Movement : Node
 	private Vector2I DestinationCoord = new Vector2I(0,0);
 	private Vector2 TopLeft;
 	private Vector2 Destination;
+	private byte[] cellData;
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -77,6 +78,12 @@ public partial class Movement : Node
 		}
 		else if (Input.IsActionPressed("down")){
 			newDestinationCoord.Y += 1;
+		}
+		if (Input.IsActionJustPressed("save")){
+			cellData = ActiveLevel.SaveCell(DestinationCoord);
+		}
+		else if (Input.IsActionJustPressed("load") && cellData is not null){
+			ActiveLevel.LoadCell(DestinationCoord, cellData);
 		}
 		if (CheckCollision(newDestinationCoord)){
 			DestinationCoord = newDestinationCoord;

@@ -167,7 +167,6 @@ public partial class TileSetManager : Node
 			ResourceLoader.CacheMode.Ignore
 		);
 		masterTileSet.AddSource(toAdd.GetSource(0), atlasSources[tileSetRef]);
-		toAdd.Free();
 	}
 
 

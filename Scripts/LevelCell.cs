@@ -149,8 +149,8 @@ public partial class LevelCell : Node2D
 			tileCodesBytes.Add((byte)entry);
 		}
 		List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
-		/*Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
-		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");*/
+		Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
+		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");
 		List<byte> outputList = new List<byte>(tileCodesBytes.Count + headerEncoded.Count);
 		outputList.AddRange(headerEncoded);
 		outputList.AddRange(tileCodesBytes);
@@ -160,15 +160,20 @@ public partial class LevelCell : Node2D
 	public static LevelCell Deserialize(byte[] input, LevelManager manager){
 		LevelCell output = new LevelCell(manager);
 		List<byte> bytes = new List<byte>(input);
-		List<(int, List<Vector2I>)> tileSetSources = DecodeTileSourceHeader(bytes);
+		(int, List<(int, List<Vector2I>)>) tileSetHeader = DecodeTileSourceHeader(bytes);
+		List<(int, List<Vector2I>)> tileSetSources = tileSetHeader.Item2;
 		int totalTiles = 1;
+		Debug.Print("Tileset header is {0} bytes long.", tileSetHeader.Item1);
 		foreach ((int, List<Vector2I>) entry in tileSetSources){
+			Debug.Print("------------------------------------------");
+			Debug.Print("Tiles for {0} are as follows:", entry.Item1);
 			foreach (Vector2I uniqueTile in entry.Item2){
+				Debug.Print(uniqueTile.ToString());
 				totalTiles++;
 			}
 		}
 		int tileBits = SerializationHelper.RepresentativeBits(totalTiles);
-		List<byte> payload = bytes.GetRange(tileSetSources.Count, bytes.Count - tileSetSources.Count);
+		List<byte> payload = bytes.GetRange(tileSetHeader.Item1, bytes.Count - tileSetHeader.Item1);
 		List<int> payloadInts = new List<int>(payload.Count);
 		foreach (byte entry in payload){
 			payloadInts.Add(entry);
@@ -198,7 +203,7 @@ public partial class LevelCell : Node2D
 		return output;
 	}
 
-	private static List<(int, List<Vector2I>)> DecodeTileSourceHeader(List<byte> bytes){
+	private static (int, List<(int, List<Vector2I>)>) DecodeTileSourceHeader(List<byte> bytes){
 		int readHead = 0;
 		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
 		readHead += 4;
@@ -218,7 +223,7 @@ public partial class LevelCell : Node2D
 			}
 			output.Add((tileId, tileList));
 		}
-		return output;
+		return (readHead, output);
 	}
 
 	/// <summary>
@@ -272,7 +277,9 @@ public partial class LevelCell : Node2D
 			int X = i / toModify.Height % toModify.Width;
 			int Y = i % toModify.Height;
 			(int, Vector2I) currentTile = codesToTiles[codeList[i]];
-			toModify.Place(layer, currentTile.Item1, new Vector2I(X, Y), currentTile.Item2);
+			if (currentTile.Item1 >= 0){
+				toModify.Place(layer, currentTile.Item1, new Vector2I(X, Y), currentTile.Item2);
+			}
 		}
 	}
 

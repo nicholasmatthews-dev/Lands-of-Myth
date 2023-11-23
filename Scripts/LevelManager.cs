@@ -73,14 +73,14 @@ public partial class LevelManager : Node2D
 
 	public bool PositionValid(ICollection<Vector2I> occupied){
 		bool valid = true;
-		foreach (Vector2I position in occupied){
+		/*foreach (Vector2I position in occupied){
 			List<Vector2I> cellCoords = TranslateCoords(position);
 			List<Vector2I> toCheck = new List<Vector2I>
             {
                 cellCoords[1]
             };
 			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
-		}
+		}*/
 		return valid;
 	}
 
@@ -159,6 +159,10 @@ public partial class LevelManager : Node2D
 		activeCells.Remove(cellCoords);
 		toDispose.Free();
 		LevelCell newCell = LevelCell.Deserialize(toLoad, this);
+		newCell.Name = "LevelCell_(" + cellCoords.X + "," + cellCoords.Y + ")";
+		newCell.Position = new Vector2(cellCoords.X * TileWidth * CellWidth
+		, cellCoords.Y * TileHeight * CellHeight);
+		Debug.Print("NewCell is " + newCell);
 		activeCells.Add(cellCoords, newCell);
 		AddChild(newCell);
 	}

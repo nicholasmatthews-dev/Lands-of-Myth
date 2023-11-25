@@ -11,24 +11,40 @@ public partial class LevelCell : Node2D
 	[Export]
 	public int TileWidth = 16;
 	[Export]
-	public int Width = 64;
+	public static int Width = 64;
 	[Export]
-	public int Height = 64;
+	public static int Height = 64;
 
+	/// <summary>
+	/// The number of layers in the <c>LevelCell</c>'s <c>TileMap</c>.
+	/// </summary>
 	private static int numLayers = 3;
 
+	/// <summary>
+	/// A <c>TileMap</c> representing the tiles contained in this cell.
+	/// </summary>
 	private TileMap tiles = new TileMap();
+	/// <summary>
+	/// A dictionary mapping between tileSetRefs and the corresponding <c>TileSetTicket</c>s which
+	/// this <c>LevelCell</c> has checked out.
+	/// </summary>
 	private Dictionary<int, TileSetTicket> tickets = new Dictionary<int, TileSetTicket>();
+	/// <summary>
+	/// A dictionary mapping between the atlas source id in the master <c>TileSet</c> and the
+	/// associated tileSetRef.
+	/// </summary>
 	private Dictionary<int, int> atlasCodesToRef = new Dictionary<int, int>();
 	private TileSetManager tileSetManager;
+	/// <summary>
+	/// A 2D array representing which coordinates are solid, <c>True</c> for solid and false
+	/// otherwise.
+	/// </summary>
 	private bool[,] Solid;
 
 	public LevelCell(LevelManager manager) : base(){
 		tileSetManager = manager.GetTileSetManager();
 		TileHeight = manager.TileHeight;
 		TileWidth = manager.TileWidth;
-		Width = manager.CellWidth;
-		Height  = manager.CellHeight;
 		tiles.TileSet = tileSetManager.GetDefaultTileSet();
 		tiles.AddLayer(-1);
 		tiles.AddLayer(-1);
@@ -124,67 +140,69 @@ public partial class LevelCell : Node2D
 	}
 
 	/// <summary>
-	/// TODO: Implement full functionality.
+	/// Returns a representation of this <c>LevelCell</c> as an ordered array of bytes. Consists of a
+	/// header "palette" and then a body of codes which correspond to entries in the palette.
 	/// <para>
-	/// Returns a representation of this LevelCell as an ordered array of bytes.
+	/// The header consists of a list of TileSets (by tileSetRef) and their associated tiles as atlas
+	/// coordinates see <see cref="EncodeTileSourceHeader"/>
+	/// </para>
+	/// <para>
+	/// The body consists of a linear list of codes which correspond to tiles via the palette. Codes are
+	/// represented by Log_2(UniqueTiles)+1 bits. See <see cref="EncodeTilesBody"/>
 	/// </para>
 	/// </summary>
 	/// <returns>An ordered byte array representing this object.</returns>
 	public byte[] Serialize(){
 		List<(int, List<Vector2I>)> tileSetSources = GetUniqueTileList();
-		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSetSources);
-		int tileBits = SerializationHelper.RepresentativeBits(uniqueTiles.Count);
-		/*int totalTileBytes = (int)Math.Ceiling(tileBits * Width * Height * numLayers / 8.0);
-		int sourceLibraryBytes = 4 + 8 * tileSetSources.Count + uniqueTiles.Count * 2;
-		Debug.Print("There are " + uniqueTiles.Count + " unique tiles.");
-		Debug.Print("It will take " + tileBits + " bits to encode each tile.");
-		Debug.Print("It will take " + totalTileBytes + " Bytes to encode all tiles.");
-		Debug.Print("It will take " + sourceLibraryBytes + " Bytes to encode the sources.");
-		Debug.Print("The estimate for the total uncompressed size of this tile is " 
-		+ (totalTileBytes + sourceLibraryBytes) + " Bytes.");*/
-		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
-		List<int> tileCodes8Bit = SerializationHelper.ConvertBetweenCodes(tileCodes, tileBits, 8);
-		List<byte> tileCodesBytes = new List<byte>(tileCodes8Bit.Count);
-		foreach (int entry in tileCodes8Bit){
-			tileCodesBytes.Add((byte)entry);
-		}
 		List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
-		Debug.Print("Sources header is " + headerEncoded.Count + " Bytes long.");
-		Debug.Print("Payload is " + tileCodesBytes.Count + " Bytes long.");
+		List<byte> tileCodesBytes = EncodeTilesBody(tileSetSources);
 		List<byte> outputList = new List<byte>(tileCodesBytes.Count + headerEncoded.Count);
 		outputList.AddRange(headerEncoded);
 		outputList.AddRange(tileCodesBytes);
-		return outputList.ToArray();
+		byte[] outputArray = outputList.ToArray();
+		return outputArray;
 	}
 
+	/// <summary>
+	/// Returns a new instance of an object based on an array of bytes previously created by an
+	/// invocation of <see cref="Serialize"/>. 
+	/// </summary>
+	/// <param name="input">The bytes which represent the <c>LevelCell</c></param>
+	/// <param name="manager">The <c>LevelManager</c> parent which is invoking this method.</param>
+	/// <returns>A new instance of <c>LevelCell</c> which is a copy of the object 
+	/// previously serialized.</returns>
 	public static LevelCell Deserialize(byte[] input, LevelManager manager){
 		LevelCell output = new LevelCell(manager);
 		List<byte> bytes = new List<byte>(input);
+
 		(int, List<(int, List<Vector2I>)>) tileSetHeader = DecodeTileSourceHeader(bytes);
 		List<(int, List<Vector2I>)> tileSetSources = tileSetHeader.Item2;
-		int totalTiles = 1;
-		Debug.Print("Tileset header is {0} bytes long.", tileSetHeader.Item1);
-		foreach ((int, List<Vector2I>) entry in tileSetSources){
-			Debug.Print("------------------------------------------");
-			Debug.Print("Tiles for {0} are as follows:", entry.Item1);
-			foreach (Vector2I uniqueTile in entry.Item2){
-				Debug.Print(uniqueTile.ToString());
-				totalTiles++;
-			}
-		}
-		int tileBits = SerializationHelper.RepresentativeBits(totalTiles);
-		List<byte> payload = bytes.GetRange(tileSetHeader.Item1, bytes.Count - tileSetHeader.Item1);
-		List<int> payloadInts = new List<int>(payload.Count);
-		foreach (byte entry in payload){
-			payloadInts.Add(entry);
-		}
+		bytes = bytes.GetRange(tileSetHeader.Item1, bytes.Count - tileSetHeader.Item1);
+
+		(int, List<int>) codesBody = DecodeTilesBody(bytes, tileSetSources);
+		List<int> codeList = codesBody.Item2;
+
 		Dictionary<(int, Vector2I), int> tileCodes = GetTileSetCodes(tileSetSources);
 		Dictionary<int, (int, Vector2I)> codesToTiles = tileCodes.ToDictionary((i) => i.Value, (i) => i.Key);
-		List<int> codeList = SerializationHelper.ConvertBetweenCodes(payloadInts, 8, tileBits, true);
 		PlaceTileCodes(output, codesToTiles, codeList);
 		return output;
 	}
 
+	/// <summary>
+	/// Encodes the list of tileSources as a list of bytes which represents the given list.
+	/// The header starts with 4 bytes which represent the number of TileSets used. 
+	/// <para>
+	/// Then for each TileSet 4 bytes are written for TileSetRef, then 4 bytes for the 
+	/// count of unique tiles for this TileSet, then 1 byte is written for AtlasX and 1 byte 
+	/// for AtlasY for each unique tile. 
+	/// </para>
+	/// <para>
+	/// Then the next TileSet follows.
+	/// </para>
+	/// </summary>
+	/// <param name="tileSources">A list representing used tile sets, the first item in the tuple is
+	/// the tileSetRef and the second is a list of tile atlas coordinates.</param>
+	/// <returns></returns>
 	private List<byte> EncodeTileSourceHeader(List<(int, List<Vector2I>)> tileSources){
 		int outputSize = 4  + 8 * tileSources.Count;
 		foreach ((int, List<Vector2I>) tileSource in tileSources){
@@ -203,6 +221,16 @@ public partial class LevelCell : Node2D
 		return output;
 	}
 
+	/// <summary>
+	/// Decodes a TileSource header previously generated by <see cref="EncodeTileSourceHeader"/>.
+	/// <para>
+	/// NOTE: This function requires that the header start at byte 0. However, the list of bytes may extend
+	/// past the length of the header.
+	/// </para>
+	/// </summary>
+	/// <param name="bytes">A list of bytes to be decoded.</param>
+	/// <returns>A tuple consisting of an integer representing the next byte to read, and a list 
+	/// representing the TileSourceHeader.</returns>
 	private static (int, List<(int, List<Vector2I>)>) DecodeTileSourceHeader(List<byte> bytes){
 		int readHead = 0;
 		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
@@ -224,6 +252,54 @@ public partial class LevelCell : Node2D
 			output.Add((tileId, tileList));
 		}
 		return (readHead, output);
+	}
+
+	/// <summary>
+	/// Encodes the tiles represented in this LevelCell as a list of bytes. First the tiles are converted
+	/// to codes by <see cref="GetTilesAsCodeArray"/> and then formatted into a list of bytes. 
+	/// </summary>
+	/// <param name="tileSources">The list of sources, see <see cref="GetUniqueTileList"/> </param>
+	/// <returns>A list of bytes representing the tiles in this <c>LevelCell</c></returns>
+	private List<byte> EncodeTilesBody(List<(int, List<Vector2I>)> tileSources){
+		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSources);
+		int tileBits = SerializationHelper.RepresentativeBits(uniqueTiles.Count);
+		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
+		List<int> tileCodes8Bit = SerializationHelper.ConvertBetweenCodes(tileCodes, tileBits, 8);
+		List<byte> tileCodesBytes = new List<byte>(tileCodes8Bit.Count);
+		foreach (int entry in tileCodes8Bit){
+			tileCodesBytes.Add((byte)entry);
+		}
+		return tileCodesBytes;
+	}
+
+	/// <summary>
+	/// Decodes the tiles previously encoded by <see cref="EncodeTilesBody"/>. 
+	/// </summary>
+	/// <param name="input">The bytes to be decoded.</param>
+	/// <param name="tileSources">The list of sources, see <see cref="GetUniqueTileList"/></param>
+	/// <returns>A list of tile codes, see <see cref="GetTilesAsCodeArray"/> </returns>
+	private static (int, List<int>) DecodeTilesBody(List<byte> input, List<(int, List<Vector2I>)> tileSources){
+		int totalTiles = 1;
+		foreach ((int, List<Vector2I>) entry in tileSources){
+			foreach (Vector2I uniqueTile in entry.Item2){
+				totalTiles++;
+			}
+		}
+		int tileBits = SerializationHelper.RepresentativeBits(totalTiles);
+		int bytesToRead;
+		if (tileBits * Width * Height * numLayers % 8 == 0){
+			bytesToRead = tileBits * Width * Height * numLayers / 8;
+		}
+		else {
+			bytesToRead = tileBits * Width * Height * numLayers / 8 + 1;
+		}
+		List<byte> payload = input.GetRange(0,bytesToRead);
+		List<int> payloadInts = new List<int>(payload.Count);
+		foreach (byte entry in payload){
+			payloadInts.Add(entry);
+		}
+		List<int> tileCodes = SerializationHelper.ConvertBetweenCodes(payloadInts, 8, tileBits, true);
+		return (bytesToRead, tileCodes);
 	}
 
 	/// <summary>
@@ -266,6 +342,13 @@ public partial class LevelCell : Node2D
 		return (sourceRef, atlasCoords);
 	}
 
+	/// <summary>
+	/// Places all the tiles in a linear list of tiles, most likely given by <see cref="DecodeTilesBody"/>,
+	/// onto a given <c>LevelCell</c>.
+	/// </summary>
+	/// <param name="toModify">The <c>LevelCell</c> to be modified.</param>
+	/// <param name="codesToTiles">A dictionary associating given codes to their associated tiles.</param>
+	/// <param name="codeList">The linear list of tiles as codes to be placed.</param>
 	private static void PlaceTileCodes
 	(
 		LevelCell toModify, 
@@ -273,9 +356,9 @@ public partial class LevelCell : Node2D
 		List<int> codeList
 	){
 		for (int i = 0; i < codeList.Count; i++){
-			int layer = i / (toModify.Width * toModify.Height);
-			int X = i / toModify.Height % toModify.Width;
-			int Y = i % toModify.Height;
+			int layer = i / (Width * Height);
+			int X = i / Height % Width;
+			int Y = i % Height;
 			(int, Vector2I) currentTile = codesToTiles[codeList[i]];
 			if (currentTile.Item1 >= 0){
 				toModify.Place(layer, currentTile.Item1, new Vector2I(X, Y), currentTile.Item2);
@@ -324,6 +407,15 @@ public partial class LevelCell : Node2D
 		return tileSetSourceList;
 	}
 
+	/// <summary>
+	/// Returns a dictionary associating unique tiles to an integer code.
+	/// <para>
+	/// Note: The tiles are sorted by tileSet, so the identifier codes will be consecutive for 
+	/// tiles in the same tileset.
+	/// </para>
+	/// </summary>
+	/// <param name="sourcesList">The sources list, see <see cref="GetUniqueTileList"/> </param>
+	/// <returns>A dictionary associating tiles with a unique identifier.</returns>
 	private static Dictionary<(int, Vector2I), int> GetTileSetCodes(List<(int, List<Vector2I>)> sourcesList){
 		Dictionary<(int, Vector2I), int> tileCodes = GetDefaultTileCodeDictionary();
 		int currentCode = tileCodes.Count;
@@ -336,6 +428,11 @@ public partial class LevelCell : Node2D
 		return tileCodes;
 	}
 
+	/// <summary>
+	/// Returns a default dictionary for <see cref="GetTileSetCodes"/>, this dictionary just includes the
+	/// special tile (-1, (-1, -1)) associated with id 0.
+	/// </summary>
+	/// <returns>A dictionary as described above.</returns>
 	private static Dictionary<(int, Vector2I), int> GetDefaultTileCodeDictionary(){
 		Dictionary<(int, Vector2I), int> tileCodes = new Dictionary<(int, Vector2I), int>{
 			{(-1, new Vector2I(-1, -1)), 0}

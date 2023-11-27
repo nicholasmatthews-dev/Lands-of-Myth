@@ -19,14 +19,14 @@ public partial class LevelManager : Node2D
 	/// <summary>
 	/// The height of a single map cell (in tiles).
 	/// </summary>
-	public int CellHeight = 64;
+	public static int CellHeight = 64;
 
 	/// <summary>
 	/// The width of a single map cell (in tiles).
 	/// </summary>
-	public int CellWidth = 64;
+	public static int CellWidth = 64;
 
-	private TileSetManager tilesetManager;
+	private Space activeSpace;
 
 	/// <summary>
 	/// The collection of active map cells, 
@@ -35,29 +35,18 @@ public partial class LevelManager : Node2D
 	private Dictionary<Vector2I,LevelCell> activeCells = new Dictionary<Vector2I, LevelCell>();
 
 	public LevelManager(TileSetManager tileManager) : base(){
-		tilesetManager = tileManager;
+		activeSpace = new WorldSpace();
 	}
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		int forestRefId = tilesetManager.GetTileSetCode("Forest");
 		for (int i = -1; i < 2; i++){
 			for (int j = -1; j < 2; j++){
-				LevelCell currentLevel = new LevelCell(this);
+				LevelCell currentLevel = activeSpace.GetLevelCell(new Vector2I(i, j));
 				AddChild(currentLevel);
 				activeCells.Add(new Vector2I(i,j), currentLevel);
 				currentLevel.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
-				if ((i + j) % 2 == 0){
-					PopulateTiles(currentLevel, new Vector2I(0,0), forestRefId);
-				}
-				else{
-					PopulateTiles(currentLevel, new Vector2I(2,1), forestRefId);
-				}
-				if (i == 0 && j == 0){
-					AddStructure(currentLevel);
-					currentLevel.CheckSolid();
-				}
 			}
 		}
 	}
@@ -67,20 +56,16 @@ public partial class LevelManager : Node2D
 	{
 	}
 
-	public TileSetManager GetTileSetManager(){
-		return tilesetManager;
-	}
-
 	public bool PositionValid(ICollection<Vector2I> occupied){
 		bool valid = true;
-		/*foreach (Vector2I position in occupied){
+		foreach (Vector2I position in occupied){
 			List<Vector2I> cellCoords = TranslateCoords(position);
 			List<Vector2I> toCheck = new List<Vector2I>
             {
                 cellCoords[1]
             };
 			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
-		}*/
+		}
 		return valid;
 	}
 
@@ -124,30 +109,6 @@ public partial class LevelManager : Node2D
 		}
 	}
 
-	private void PopulateTiles(LevelCell input, Vector2I fill, int tileSetRef){
-		for (int i = 0; i < CellWidth; i++){
-			for (int j = 0; j < CellHeight; j++){
-				input.Place(0, tileSetRef, new Vector2I(i, j), fill);
-			}
-		}
-	}
-
-	private void AddStructure(LevelCell input){
-		int buildingsRefId = tilesetManager.GetTileSetCode("Elf_Buildings");
-		TileMap houses = (TileMap)ResourceLoader
-		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
-		.Instantiate();
-		for (int i = 0; i < CellWidth; i++){
-			for (int j = 0; j < CellWidth; j++){
-				for (int k = 0; k < 2; k++){
-					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-					input.Place(k + 1, buildingsRefId, new Vector2I(i, j), atlasCoords);
-				}
-			}
-		}
-		houses.Free();
-	}
-
 	public byte[] SaveCell(Vector2I coords){
 		LevelCell toSave = activeCells[TranslateCoords(coords)[0]];
 		return toSave.Serialize();
@@ -158,7 +119,7 @@ public partial class LevelManager : Node2D
 		LevelCell toDispose = activeCells[cellCoords];
 		activeCells.Remove(cellCoords);
 		toDispose.Free();
-		LevelCell newCell = LevelCell.Deserialize(toLoad, this);
+		LevelCell newCell = LevelCell.Deserialize(toLoad);
 		newCell.Name = "LevelCell_(" + cellCoords.X + "," + cellCoords.Y + ")";
 		newCell.Position = new Vector2(cellCoords.X * TileWidth * CellWidth
 		, cellCoords.Y * TileHeight * CellHeight);

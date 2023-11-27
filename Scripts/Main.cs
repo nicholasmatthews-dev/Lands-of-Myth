@@ -8,11 +8,11 @@ public partial class Main : Node2D
 	private Movement movement;
 	private Node2D character;
 	private LevelManager levelManager;
-	private TileSetManager tileSetManager;
+	public static TileSetManager tileSetManager = new TileSetManager();
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		tileSetManager = new TileSetManager();
+		//tileSetManager = new TileSetManager();
 		camera = (CameraFollow)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/camera_follow.tscn")
 		.Instantiate();

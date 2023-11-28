@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Control;
+namespace LOM.Control;
 
 public partial class Movement : Node
 {

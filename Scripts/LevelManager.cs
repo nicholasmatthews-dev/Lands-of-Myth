@@ -1,4 +1,4 @@
-using Control;
+using LOM.Control;
 using Godot;
 using System;
 using System.Collections.Generic;

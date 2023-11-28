@@ -5,6 +5,15 @@ using System.Diagnostics;
 public class WorldSpace : Space {
     private int id = 0;
     private string spaceName = "Overworld";
+    private string basePath;
+
+    public WorldSpace() : base(){
+        basePath = Main.world.GetSavePath() + "/" + spaceName;
+        Debug.Print("WorldSpace: Attempting to create directory: \"" + basePath + "\"");
+        Error error = DirAccess.MakeDirRecursiveAbsolute(basePath);
+        Debug.Print("WorldSpace: Error is " + error);
+    }
+
     public override LevelCell GetLevelCell(Vector2I coords){
         using var file = FileAccess.Open(GetFullCellPathByCoords(coords), FileAccess.ModeFlags.Read);
         if (file is null){
@@ -18,6 +27,8 @@ public class WorldSpace : Space {
         using var file = FileAccess.Open(GetFullCellPathByCoords(coords), 
         FileAccess.ModeFlags.Write);
         if (file is null){
+            Debug.Print("WorldSpace: Attempt to write failed.");
+            Debug.Print("WorldSpace: Error: " + FileAccess.GetOpenError());
             return;
         }
         file.Store64((ulong)cellToStore.Length);
@@ -71,7 +82,7 @@ public class WorldSpace : Space {
 
     private string GetFullCellPathByCoords(Vector2I coords){
         string cellPath = GetCellPathByCoords(coords);
-        return Main.world.GetSavePath() + spaceName + "/" + cellPath + ".dat";
+        return basePath + "/" + cellPath + ".dat";
     }
 
     private static string GetCellPathByCoords(Vector2I coords){

@@ -10,6 +10,6 @@ public class World {
     }
 
     public string GetSavePath(){
-        return rootFolder + Name + "/";
+        return rootFolder + Name;
     }
 }

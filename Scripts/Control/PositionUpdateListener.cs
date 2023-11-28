@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-namespace Control;
+namespace LOM.Control;
 
 public interface PositionUpdateListener{
     /// <summary>

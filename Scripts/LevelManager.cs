@@ -1,10 +1,11 @@
+using Control;
 using Godot;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-public partial class LevelManager : Node2D
+public partial class LevelManager : Node2D, PositionUpdateListener
 {
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
@@ -28,6 +29,8 @@ public partial class LevelManager : Node2D
 
 	private Space activeSpace;
 
+	private Vector2I lastPosition = new(0,0);
+
 	/// <summary>
 	/// The collection of active map cells, 
 	/// indexed by their position (counted by number of cells from the origin).
@@ -41,19 +44,82 @@ public partial class LevelManager : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		for (int i = -1; i < 2; i++){
-			for (int j = -1; j < 2; j++){
-				LevelCell currentLevel = activeSpace.GetLevelCell(new Vector2I(i, j));
-				AddChild(currentLevel);
-				activeCells.Add(new Vector2I(i,j), currentLevel);
-				currentLevel.Position = new Vector2(TileWidth * CellWidth * i, TileHeight * CellHeight * j);
-			}
-		}
+		ChangeLoadedCells(lastPosition);
+		Main.movement.AddPositionUpdateListener(this);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+	public void OnPositionUpdate(Vector2I coords){
+		List<Vector2I> translatedCoords = TranslateCoords(coords);
+		if (translatedCoords[0] != lastPosition){
+			lastPosition = translatedCoords[0];
+			ChangeLoadedCells(lastPosition);
+		}
+	}
+
+	/// <summary>
+	/// Updates the currently loaded cells so they are centered on the given cooridinates in cell space.
+	/// <para>
+	/// That is, all cells in a 3x3 square centered around the given cooridinates will be loaded, and any
+	/// cells which were previously outside of the space will be unloaded.
+	/// </para>
+	/// </summary>
+	/// <param name="coords"></param>
+	private void ChangeLoadedCells(Vector2I coords){
+		List<Vector2I> cellsToRemove = new List<Vector2I>(9);
+		foreach (KeyValuePair<Vector2I, LevelCell> entry in activeCells){
+			if (Math.Abs(coords.X - entry.Key.X) > 1){
+				cellsToRemove.Add(entry.Key);
+			}
+		}
+		foreach (Vector2I entry in cellsToRemove){
+			DisposeOfCell(entry);
+		}
+		for (int i = -1; i < 2; i++){
+			for (int j = -1; j < 2; j++){
+				Vector2I currentCoords = new Vector2I(i + coords.X, j + coords.Y);
+				LoadLevelCellFromSpace(currentCoords);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Loads in a LevelCell at the given coords from the currently active Space.
+	/// </summary>
+	/// <param name="coords">The coordinates of the LevelCell to be loaded.</param>
+	private void LoadLevelCellFromSpace(Vector2I coords){
+		if (!activeCells.ContainsKey(coords)){
+			LevelCell loaded = activeSpace.GetLevelCell(coords);
+			AddActiveCell(coords, loaded);
+		}
+	}
+
+	/// <summary>
+	/// Adds a LevelCell into the active cells dictionary with the specified coordinates, and positions
+	/// it into the correct place.
+	/// </summary>
+	/// <param name="coords">The coordinates (given in the cell grid space).</param>
+	/// <param name="levelCell">The LevelCell to be loaded.</param>
+	private void AddActiveCell(Vector2I coords, LevelCell levelCell){
+		Debug.Print("LevelManager: Adding cell at: " + coords);
+		AddChild(levelCell);
+		activeCells.Add(coords, levelCell);
+		levelCell.Position = new Vector2
+		(
+			TileWidth * CellWidth * coords.X,
+			TileHeight * CellHeight * coords.Y
+		);
+	}
+
+	private void DisposeOfCell(Vector2I coords){
+		Debug.Print("LevelManager: Unloading cell at " + coords);
+		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
+		activeCells[coords].Free();
+		activeCells.Remove(coords);
 	}
 
 	public bool PositionValid(ICollection<Vector2I> occupied){

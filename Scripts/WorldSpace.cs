@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 public class WorldSpace : Space {
     private int id = 0;
-    private String spaceName = "Overworld";
+    private string spaceName = "Overworld";
     public override LevelCell GetLevelCell(Vector2I coords){
         using var file = FileAccess.Open(GetFullCellPathByCoords(coords), FileAccess.ModeFlags.Read);
         if (file is null){
@@ -14,6 +14,7 @@ public class WorldSpace : Space {
     }
 
     public override void StoreBytesToCell(byte[] cellToStore, Vector2I coords){
+        Debug.Print("WorldSpace: Saving cell to \"" + GetFullCellPathByCoords(coords) + "\"");
         using var file = FileAccess.Open(GetFullCellPathByCoords(coords), 
         FileAccess.ModeFlags.Write);
         if (file is null){
@@ -24,14 +25,14 @@ public class WorldSpace : Space {
     }
 
     private static LevelCell LoadCellFromDisk(FileAccess file){
-        Debug.Print("Loading cell from \"" + file.GetPath() + "\".");
+        Debug.Print("WorldSpace: Loading cell from \"" + file.GetPath() + "\".");
         int bufferLength = (int)file.Get64();
         byte[] buffer = file.GetBuffer(bufferLength);
         return LevelCell.Deserialize(buffer);
     }
 
     private LevelCell GenerateNewCell(Vector2I coords){
-        Debug.Print("Generating new cell with coords: " + coords);
+        Debug.Print("WorldSpace: Generating new cell with coords: " + coords);
         int forestRefId = Main.tileSetManager.GetTileSetCode("Forest");
         LevelCell newCell = new LevelCell();
         Vector2I fill;
@@ -70,7 +71,7 @@ public class WorldSpace : Space {
 
     private string GetFullCellPathByCoords(Vector2I coords){
         string cellPath = GetCellPathByCoords(coords);
-        return rootFolder + spaceName + "/" + cellPath + ".dat";
+        return Main.world.GetSavePath() + spaceName + "/" + cellPath + ".dat";
     }
 
     private static string GetCellPathByCoords(Vector2I coords){

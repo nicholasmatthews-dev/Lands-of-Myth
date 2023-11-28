@@ -40,8 +40,12 @@ public partial class Movement : Node
 
 	public LevelManager ActiveLevel;
 
-	private Vector2I PositionCoord = new Vector2I(0,0);
-	private Vector2I DestinationCoord = new Vector2I(0,0);
+	private bool destinationReached = true;
+
+	private HashSet<WeakReference<PositionUpdateListener>> positionUpdateListeners = new();
+
+	private Vector2I PositionCoord = new(0,0);
+	private Vector2I DestinationCoord = new(0,0);
 	private Vector2 TopLeft;
 	private Vector2 Destination;
 	private byte[] cellData;
@@ -60,6 +64,28 @@ public partial class Movement : Node
 			HandleInput();
 		}
 		MoveToDestination(delta);
+	}
+
+	public void AddPositionUpdateListener(PositionUpdateListener listener){
+		WeakReference<PositionUpdateListener> reference 
+		= new WeakReference<PositionUpdateListener>(listener);
+		positionUpdateListeners.Add(reference);
+	}
+
+	private void SignalPositionUpdate(){
+		List<WeakReference<PositionUpdateListener>> deadReferences = new(positionUpdateListeners.Count);
+		foreach (WeakReference<PositionUpdateListener> reference in positionUpdateListeners){
+            if (reference.TryGetTarget(out PositionUpdateListener listener))
+            {
+                listener.OnPositionUpdate(PositionCoord);
+            }
+			else {
+				deadReferences.Add(reference);
+			}
+        }
+		foreach (WeakReference<PositionUpdateListener> reference in deadReferences){
+			positionUpdateListeners.Remove(reference);
+		}
 	}
 
 	/// <summary>
@@ -87,6 +113,9 @@ public partial class Movement : Node
 		}
 		if (CheckCollision(newDestinationCoord)){
 			DestinationCoord = newDestinationCoord;
+			if (DestinationCoord != PositionCoord){
+				destinationReached = false;
+			}
 			Destination = new Vector2(DestinationCoord.X * TileWidth, DestinationCoord.Y * TileHeight)
 			- TopLeft;
 		}
@@ -113,6 +142,10 @@ public partial class Movement : Node
 		if (toDestination.Length() <= Speed * delta){
 			Target.Position = Destination;
 			PositionCoord = DestinationCoord;
+			if (!destinationReached){
+				SignalPositionUpdate();
+				destinationReached = true;
+			}
 		}
 		else {
 			Target.Position += Target.Position.DirectionTo(Destination) * Speed * (float)delta;

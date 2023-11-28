@@ -66,12 +66,27 @@ public partial class Movement : Node
 		MoveToDestination(delta);
 	}
 
+	/// <summary>
+	/// Adds a position update listener as a subscriber to this object.
+	/// <para>
+	/// NOTE: All references to listeners are stored as <c>WeakReference</c>s so this
+	/// object shouldn't be relied on to keep its listeners alive.
+	/// </para>
+	/// </summary>
+	/// <param name="listener">The listener which wishes to subscribe to this object.</param>
 	public void AddPositionUpdateListener(PositionUpdateListener listener){
 		WeakReference<PositionUpdateListener> reference 
 		= new WeakReference<PositionUpdateListener>(listener);
 		positionUpdateListeners.Add(reference);
 	}
 
+	/// <summary>
+	/// Sends a position update including the current <c>PositionCoord</c> to all the 
+	/// <c>PositionUpdateListener</c>s subscribed to this object.
+	/// <para>
+	/// NOTE: This function also cleans up (removes) any references to dead listeners.
+	/// </para>
+	/// </summary>
 	private void SignalPositionUpdate(){
 		List<WeakReference<PositionUpdateListener>> deadReferences = new(positionUpdateListeners.Count);
 		foreach (WeakReference<PositionUpdateListener> reference in positionUpdateListeners){
@@ -104,12 +119,6 @@ public partial class Movement : Node
 		}
 		else if (Input.IsActionPressed("down")){
 			newDestinationCoord.Y += 1;
-		}
-		if (Input.IsActionJustPressed("save")){
-			cellData = ActiveLevel.SaveCell(DestinationCoord);
-		}
-		else if (Input.IsActionJustPressed("load") && cellData is not null){
-			ActiveLevel.LoadCell(DestinationCoord, cellData);
 		}
 		if (CheckCollision(newDestinationCoord)){
 			DestinationCoord = newDestinationCoord;

@@ -105,7 +105,6 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// <param name="coords">The coordinates (given in the cell grid space).</param>
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
 	private void AddActiveCell(Vector2I coords, LevelCell levelCell){
-		Debug.Print("LevelManager: Adding cell at: " + coords);
 		AddChild(levelCell);
 		activeCells.Add(coords, levelCell);
 		levelCell.Position = new Vector2
@@ -115,8 +114,11 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 		);
 	}
 
+	/// <summary>
+	/// Unloads the cell at the given coordinates.
+	/// </summary>
+	/// <param name="coords">The coordinates of the cell to unload.</param>
 	private void DisposeOfCell(Vector2I coords){
-		Debug.Print("LevelManager: Unloading cell at " + coords);
 		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
 		activeCells[coords].Free();
 		activeCells.Remove(coords);
@@ -173,25 +175,6 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 		else {
 			return (a / b);
 		}
-	}
-
-	public byte[] SaveCell(Vector2I coords){
-		LevelCell toSave = activeCells[TranslateCoords(coords)[0]];
-		return toSave.Serialize();
-	}
-
-	public void LoadCell(Vector2I coords, byte[] toLoad){
-		Vector2I cellCoords = TranslateCoords(coords)[0];
-		LevelCell toDispose = activeCells[cellCoords];
-		activeCells.Remove(cellCoords);
-		toDispose.Free();
-		LevelCell newCell = LevelCell.Deserialize(toLoad);
-		newCell.Name = "LevelCell_(" + cellCoords.X + "," + cellCoords.Y + ")";
-		newCell.Position = new Vector2(cellCoords.X * TileWidth * CellWidth
-		, cellCoords.Y * TileHeight * CellHeight);
-		Debug.Print("NewCell is " + newCell);
-		activeCells.Add(cellCoords, newCell);
-		AddChild(newCell);
 	}
 
 }

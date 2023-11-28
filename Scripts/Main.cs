@@ -23,7 +23,7 @@ public partial class Main : Node2D
 		character = (Node2D)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/00dummy.tscn")
 		.Instantiate();
-		levelManager = new LevelManager(tileSetManager);
+		levelManager = new LevelManager();
 
 		camera.Target = character;
 		movement.Target = character;

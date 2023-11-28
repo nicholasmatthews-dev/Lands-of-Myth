@@ -37,7 +37,7 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// </summary>
 	private Dictionary<Vector2I,LevelCell> activeCells = new Dictionary<Vector2I, LevelCell>();
 
-	public LevelManager(TileSetManager tileManager) : base(){
+	public LevelManager() : base(){
 		activeSpace = new WorldSpace();
 	}
 

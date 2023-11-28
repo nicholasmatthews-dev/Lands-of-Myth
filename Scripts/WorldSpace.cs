@@ -15,7 +15,12 @@ public class WorldSpace : Space {
     }
 
     public override LevelCell GetLevelCell(Vector2I coords){
-        using var file = FileAccess.Open(GetFullCellPathByCoords(coords), FileAccess.ModeFlags.Read);
+        using var file = FileAccess.OpenCompressed
+        (
+            GetFullCellPathByCoords(coords), 
+            FileAccess.ModeFlags.Read,
+            compressionMode
+        );
         if (file is null){
             return GenerateNewCell(coords);
         }
@@ -23,11 +28,14 @@ public class WorldSpace : Space {
     }
 
     public override void StoreBytesToCell(byte[] cellToStore, Vector2I coords){
-        Debug.Print("WorldSpace: Saving cell to \"" + GetFullCellPathByCoords(coords) + "\"");
-        using var file = FileAccess.Open(GetFullCellPathByCoords(coords), 
-        FileAccess.ModeFlags.Write);
+        using var file = FileAccess.OpenCompressed
+        (
+            GetFullCellPathByCoords(coords), 
+            FileAccess.ModeFlags.Write,
+            compressionMode
+        );
         if (file is null){
-            Debug.Print("WorldSpace: Attempt to write failed.");
+            Debug.Print("WorldSpace: Attempt to write to " + GetFullCellPathByCoords(coords) + " failed.");
             Debug.Print("WorldSpace: Error: " + FileAccess.GetOpenError());
             return;
         }
@@ -35,15 +43,24 @@ public class WorldSpace : Space {
         file.StoreBuffer(cellToStore);
     }
 
+    /// <summary>
+    /// Loads a given <c>LevelCell</c> from the given file.
+    /// </summary>
+    /// <param name="file">The file to be opened.</param>
+    /// <returns>The LevelCell stored in the file.</returns>
     private static LevelCell LoadCellFromDisk(FileAccess file){
-        Debug.Print("WorldSpace: Loading cell from \"" + file.GetPath() + "\".");
         int bufferLength = (int)file.Get64();
         byte[] buffer = file.GetBuffer(bufferLength);
         return LevelCell.Deserialize(buffer);
     }
 
+    /// <summary>
+    /// Generates a new <c>LevelCell</c> at the given coordinates.
+    /// </summary>
+    /// <param name="coords">The coordinates of the <c>LevelCell</c> to generate in cell 
+    /// space.</param>
+    /// <returns>A newly generated <c>LevelCell</c> at the given coordinates.</returns>
     private LevelCell GenerateNewCell(Vector2I coords){
-        Debug.Print("WorldSpace: Generating new cell with coords: " + coords);
         int forestRefId = Main.tileSetManager.GetTileSetCode("Forest");
         LevelCell newCell = new LevelCell();
         Vector2I fill;
@@ -59,12 +76,16 @@ public class WorldSpace : Space {
             }
         }
         if (coords.X == 0 && coords.Y == 0){
-            AddStructure(newCell);
+            AddStructure(ref newCell);
         }
         return newCell;
     }
 
-    private void AddStructure(LevelCell input){
+    /// <summary>
+    /// A testing method which adds in the test structure to a given cell.
+    /// </summary>
+    /// <param name="input">The <c>LevelCell</c> to be modified.</param>
+    private void AddStructure(ref LevelCell input){
 		int buildingsRefId = Main.tileSetManager.GetTileSetCode("Elf_Buildings");
 		TileMap houses = (TileMap)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
@@ -80,12 +101,22 @@ public class WorldSpace : Space {
 		houses.Free();
 	}
 
+    /// <summary>
+    /// Gets the full file name and path for the <c>LevelCell</c> at the given coordinates.
+    /// </summary>
+    /// <param name="coords">The coordinates of the <c>LevelCell</c> in question.</param>
+    /// <returns>A string giving the path as specified above.</returns>
     private string GetFullCellPathByCoords(Vector2I coords){
-        string cellPath = GetCellPathByCoords(coords);
+        string cellPath = GetCellFileName(coords);
         return basePath + "/" + cellPath + ".dat";
     }
 
-    private static string GetCellPathByCoords(Vector2I coords){
+    /// <summary>
+    /// Gets the file name for the given <c>LevelCell</c> at the specified coordinates.
+    /// </summary>
+    /// <param name="coords">The coordinates of the <c>LevelCell</c> in question.</param>
+    /// <returns>A string representing the file name of the <c>LevelCell</c></returns>
+    private static string GetCellFileName(Vector2I coords){
         return coords.X + "_" + coords.Y;
     }
 

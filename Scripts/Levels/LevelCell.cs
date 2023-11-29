@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
+namespace LOM.Levels;
+
 public partial class LevelCell : Node2D
 {
 	[Export]

@@ -1,9 +1,12 @@
 using LOM.Control;
+using LOM.Spaces;
 using Godot;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+
+namespace LOM.Levels;
 
 public partial class LevelManager : Node2D, PositionUpdateListener
 {

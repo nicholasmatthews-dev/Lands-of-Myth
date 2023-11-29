@@ -1,5 +1,8 @@
 using Godot;
+using LOM.Levels;
 using System;
+
+namespace LOM.Spaces;
 
 public abstract class Space{
     protected const FileAccess.CompressionMode compressionMode = FileAccess.CompressionMode.GZip;

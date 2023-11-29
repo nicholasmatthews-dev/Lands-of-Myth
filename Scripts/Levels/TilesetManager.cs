@@ -2,6 +2,8 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+namespace LOM.Levels;
+
 public partial class TileSetManager : Node
 {
 	class Ticket : TileSetTicket {

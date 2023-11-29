@@ -1,6 +1,8 @@
 using Godot;
 using System;
 
+namespace LOM.Spaces;
+
 public class World {
     private static string rootFolder = "user://Worlds/";
     public readonly string Name = "New World";

@@ -1,4 +1,6 @@
 using LOM.Control;
+using LOM.Levels;
+using LOM.Spaces;
 using Godot;
 using System;
 

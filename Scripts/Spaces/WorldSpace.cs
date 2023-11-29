@@ -2,6 +2,10 @@ using Godot;
 using System;
 using System.Diagnostics;
 
+using LOM.Levels;
+
+namespace LOM.Spaces;
+
 public class WorldSpace : Space {
     private int id = 0;
     private string spaceName = "Overworld";

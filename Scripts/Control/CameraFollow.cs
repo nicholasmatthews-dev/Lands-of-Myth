@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Diagnostics;
 
-namespace Control;
+namespace LOM.Control;
 public partial class CameraFollow : Node
 {
 	/// <summary>

@@ -1,16 +1,21 @@
-using Control;
+using LOM.Control;
+using LOM.Levels;
+using LOM.Spaces;
 using Godot;
 using System;
 
 public partial class Main : Node2D
 {
 	private CameraFollow camera;
-	private Movement movement;
+	public static Movement movement;
 	private Node2D character;
 	private LevelManager levelManager;
+	public static TileSetManager tileSetManager = new TileSetManager();
+	public static World world = new World("New World");
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		//tileSetManager = new TileSetManager();
 		camera = (CameraFollow)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/camera_follow.tscn")
 		.Instantiate();
@@ -26,6 +31,7 @@ public partial class Main : Node2D
 		movement.Target = character;
 		movement.ActiveLevel = levelManager;
 		
+		AddChild(tileSetManager);
 		AddChild(levelManager);
 		AddChild(character);
 		AddChild(movement);

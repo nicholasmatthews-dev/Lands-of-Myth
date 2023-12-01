@@ -29,4 +29,9 @@ public class Tile{
         return (tileSetRef, atlasX, atlasY).GetHashCode();
     }
 
+    public override string ToString()
+    {
+        return "(Tile: (RefId: " + tileSetRef + ", Coords: (" + atlasX + ", " + atlasY + "))"; 
+    }
+
 }

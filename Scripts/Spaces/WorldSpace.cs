@@ -67,16 +67,16 @@ public class WorldSpace : Space {
     private LevelCell GenerateNewCell(Vector2I coords){
         int forestRefId = Main.tileSetManager.GetTileSetCode("Forest");
         LevelCell newCell = new LevelCell();
-        Vector2I fill;
+        (int, int) fill;
         if ((coords.X + coords.Y) % 2 == 0){
-            fill = new Vector2I(0,0);
+            fill = (0,0);
         }
         else{
-            fill = new Vector2I(2,1);
+            fill = (2,1);
         }
         for (int i = 0; i < LevelCell.Width; i++){
             for (int j = 0; j < LevelCell.Height; j++){
-                newCell.Place(0, forestRefId, new Vector2I(i,j), fill);
+                newCell.Place(0, forestRefId, (i, j), fill);
             }
         }
         if (coords.X == 0 && coords.Y == 0){
@@ -98,7 +98,7 @@ public class WorldSpace : Space {
 			for (int j = 0; j < LevelCell.Height; j++){
 				for (int k = 0; k < 2; k++){
 					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-					input.Place(k + 1, buildingsRefId, new Vector2I(i, j), atlasCoords);
+					input.Place(k + 1, buildingsRefId, (i,j), (atlasCoords.X, atlasCoords.Y));
 				}
 			}
 		}

@@ -5,20 +5,21 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace LOM.Levels;
 
-public partial class LevelManager : Node2D, PositionUpdateListener
+public partial class LevelManager : PositionUpdateListener
 {
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>
-	public int TileHeight = 16;
+	public static int TileHeight = 16;
 
 	/// <summary>
 	/// The width of a signle tile in the tileset (in pixels).
 	/// </summary>
-	public int TileWidth = 16;
+	public static int TileWidth = 16;
 
 	/// <summary>
 	/// The height of a single map cell (in tiles).
@@ -40,20 +41,11 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// </summary>
 	private Dictionary<Vector2I,LevelCell> activeCells = new Dictionary<Vector2I, LevelCell>();
 
-	public LevelManager() : base(){
+	public ConcurrentQueue<(bool, Vector2I, LevelCell)> levelCellUpdates = new();
+
+	public LevelManager(){
 		activeSpace = new WorldSpace();
-	}
-
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
 		ChangeLoadedCells(lastPosition);
-		Main.movement.AddPositionUpdateListener(this);
-	}
-
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
 	}
 
 	public void OnPositionUpdate(Vector2I coords){
@@ -77,6 +69,7 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 		foreach (KeyValuePair<Vector2I, LevelCell> entry in activeCells){
 			if (Math.Abs(coords.X - entry.Key.X) > 1){
 				cellsToRemove.Add(entry.Key);
+				levelCellUpdates.Enqueue((true, entry.Key, null));
 			}
 		}
 		foreach (Vector2I entry in cellsToRemove){
@@ -108,13 +101,8 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// <param name="coords">The coordinates (given in the cell grid space).</param>
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
 	private void AddActiveCell(Vector2I coords, LevelCell levelCell){
-		AddChild(levelCell);
 		activeCells.Add(coords, levelCell);
-		levelCell.Position = new Vector2
-		(
-			TileWidth * CellWidth * coords.X,
-			TileHeight * CellHeight * coords.Y
-		);
+		levelCellUpdates.Enqueue((false, coords, levelCell));
 	}
 
 	/// <summary>
@@ -123,7 +111,6 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// <param name="coords">The coordinates of the cell to unload.</param>
 	private void DisposeOfCell(Vector2I coords){
 		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
-		activeCells[coords].Free();
 		activeCells.Remove(coords);
 	}
 
@@ -131,9 +118,9 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 		bool valid = true;
 		foreach (Vector2I position in occupied){
 			List<Vector2I> cellCoords = TranslateCoords(position);
-			List<Vector2I> toCheck = new List<Vector2I>
+			List<(int, int)> toCheck = new List<(int, int)>
             {
-                cellCoords[1]
+                (cellCoords[1].X, cellCoords[1].Y)
             };
 			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
 		}

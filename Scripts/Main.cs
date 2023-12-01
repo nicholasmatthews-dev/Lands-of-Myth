@@ -9,8 +9,9 @@ public partial class Main : Node2D
 	private CameraFollow camera;
 	public static Movement movement;
 	private Node2D character;
-	private LevelManager levelManager;
+	private LevelManagerNode levelManager;
 	public static TileSetManager tileSetManager = new TileSetManager();
+	public static GameModel gameModel = new();
 	public static World world = new World("New World");
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -25,11 +26,14 @@ public partial class Main : Node2D
 		character = (Node2D)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/00dummy.tscn")
 		.Instantiate();
-		levelManager = new LevelManager();
+        levelManager = new LevelManagerNode(GameModel.levelManager)
+        {
+            Name = "LevelManager"
+        };
 
-		camera.Target = character;
+        camera.Target = character;
 		movement.Target = character;
-		movement.ActiveLevel = levelManager;
+		movement.ActiveLevel = GameModel.levelManager;
 		
 		AddChild(tileSetManager);
 		AddChild(levelManager);

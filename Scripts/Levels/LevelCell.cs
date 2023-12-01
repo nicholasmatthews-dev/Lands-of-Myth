@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -42,6 +43,8 @@ public partial class LevelCell
 		{0, Tile.EmptyTile}
 	};
 
+	public ConcurrentQueue<((int, int, int), Tile)> tileUpdates = new();
+
 	public LevelCell(){
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
@@ -53,6 +56,13 @@ public partial class LevelCell
 		}
 	}
 
+	/// <summary>
+	/// Gets the <c>Tile</c> at the given coordinates, this function will decode from
+	/// the tile code in the Tiles array to the appropriate Tile.
+	/// </summary>
+	/// <param name="coords"></param>
+	/// <param name="layer"></param>
+	/// <returns></returns>
 	private Tile GetTile((int, int) coords, int layer){
 		return codesToTiles[tiles[coords.Item1, coords.Item2, layer]];
 	}
@@ -102,9 +112,18 @@ public partial class LevelCell
 	public void Place(int layer, int tileSetRef, (int, int) coords, (int, int) atlasCoords){
 		Tile toPlace = new Tile(tileSetRef, atlasCoords.Item1, atlasCoords.Item2);
 		int code = GetTileAsCode(toPlace);
+		Tile permTile = codesToTiles[code];
 		tiles[coords.Item1, coords.Item2, layer] = code;
+		tileUpdates.Enqueue(((coords.Item1, coords.Item2, layer), permTile));
 	}
 
+	/// <summary>
+	/// Returns the code that corresponds to this tile in the <c>Tile</c> array.
+	/// If no code currently exists, the a new code will be created and associated with
+	/// this tile.
+	/// </summary>
+	/// <param name="input"></param>
+	/// <returns></returns>
 	public int GetTileAsCode(Tile input){
 		if (!tickets.ContainsKey(input.tileSetRef)){
 			AddTicket(input.tileSetRef);
@@ -125,7 +144,7 @@ public partial class LevelCell
 	/// </summary>
 	/// <param name="tileSetRef">The reference code for the desired tileset.</param>
 	private void AddTicket(int tileSetRef){
-		TileSetTicket tileSetTicket = Main.tileSetManager.GetTileSetTicket(tileSetRef);
+		TileSetTicket tileSetTicket = GameModel.tileSetManager.GetTileSetTicket(tileSetRef);
 		tickets.Add(tileSetRef, tileSetTicket);
 		atlasCodesToRef.Add(tileSetTicket.GetAtlasId(), tileSetRef);
 	}
@@ -347,7 +366,7 @@ public partial class LevelCell
 
 	/// <summary>
 	/// Returns a list of tuples in which each tileSet is associated with a list of all
-	/// the atlas coords of all the unique tiles which use that tileSet.
+	/// the unique tiles which use that tileSet.
 	/// <para>
 	/// Note that the unique tile for a null value is not included in this list.
 	/// </para>
@@ -417,5 +436,9 @@ public partial class LevelCell
 			{Tile.EmptyTile, 0}
 		};
 		return tileCodes;
+	}
+
+	public int GetAtlasId(int tileSetRef){
+		return tickets[tileSetRef].GetAtlasId();
 	}
 }

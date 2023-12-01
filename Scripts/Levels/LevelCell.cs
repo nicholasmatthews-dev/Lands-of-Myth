@@ -1,4 +1,3 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,15 +5,11 @@ using System.Linq;
 
 namespace LOM.Levels;
 
-public partial class LevelCell : Node2D
+public partial class LevelCell
 {
-	[Export]
 	public int TileHeight = 16;
-	[Export]
 	public int TileWidth = 16;
-	[Export]
 	public static int Width = LevelManager.CellWidth;
-	[Export]
 	public static int Height = LevelManager.CellHeight;
 
 	/// <summary>
@@ -25,7 +20,7 @@ public partial class LevelCell : Node2D
 	/// <summary>
 	/// A <c>TileMap</c> representing the tiles contained in this cell.
 	/// </summary>
-	private TileMap tiles = new TileMap();
+	//private TileMap tiles = new TileMap();
 	/// <summary>
 	/// A dictionary mapping between tileSetRefs and the corresponding <c>TileSetTicket</c>s which
 	/// this <c>LevelCell</c> has checked out.
@@ -40,30 +35,26 @@ public partial class LevelCell : Node2D
 	/// A 2D array representing which coordinates are solid, <c>True</c> for solid and false
 	/// otherwise.
 	/// </summary>
-	private bool[,] Solid;
+	private bool[,] Solid = new bool[Width, Height];
+	private int[,,] tiles = new int[Width, Height, numLayers];
+	private Dictionary<Tile, int> tileToCodes = GetDefaultTileCodeDictionary();
+	private Dictionary<int, Tile> codesToTiles = new(){
+		{0, Tile.EmptyTile}
+	};
 
-	public LevelCell() : base(){
-		tiles.TileSet = Main.tileSetManager.GetDefaultTileSet();
-		tiles.AddLayer(-1);
-		tiles.AddLayer(-1);
-	}
-
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-		AddChild(tiles);
-		Solid = new bool[Width,Height];
+	public LevelCell(){
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
 				Solid[i,j] = false;
+				for (int k = 0; k < numLayers; k++){
+					tiles[i,j,k] = 0;
+				}
 			}
 		}
-		CheckSolid();
 	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
+	private Tile GetTile((int, int) coords, int layer){
+		return codesToTiles[tiles[coords.Item1, coords.Item2, layer]];
 	}
 
 	/// <summary>
@@ -72,16 +63,12 @@ public partial class LevelCell : Node2D
 	public void CheckSolid(){
 		for (int i=0; i < Width; i++){
 			for (int j=0; j < Height; j++){
-				for (int k=0; k < tiles.GetLayersCount(); k++){
-					TileData cellData = tiles.GetCellTileData(k, new Vector2I(i,j));
+				for (int k=0; k < numLayers; k++){
+					Tile cellData = GetTile((i, j), k);
 					if (cellData is null){
 						break;
 					}
-					Variant solidData = cellData.GetCustomData("Solid");
-					if (solidData.VariantType == Variant.Type.Bool){
-						bool solidPresent = solidData.AsBool();
-						Solid[i,j] = solidPresent || Solid[i,j];
-					}
+					Solid[i,j] = cellData.isSolid || Solid[i,j];
 				}
 			}
 		}
@@ -93,12 +80,12 @@ public partial class LevelCell : Node2D
 	/// </summary>
 	/// <param name="occupied">The collection of tiles to check collision for.</param>
 	/// <returns><c>True</c> if none of the tiles are solid, <c>False</c> otherwise.</returns>
-	public bool PositionValid(ICollection<Vector2I> occupied){
+	public bool PositionValid(ICollection<(int, int)> occupied){
 		bool valid = true;
-		foreach (Vector2I position in occupied){
-			if (position.X >= 0 && position.X < Width){
-				if (position.Y >= 0 && position.Y < Height){
-					valid = valid && !Solid[position.X,position.Y];
+		foreach ((int, int) position in occupied){
+			if (position.Item1 >= 0 && position.Item1 < Width){
+				if (position.Item2 >= 0 && position.Item2 < Height){
+					valid = valid && !Solid[position.Item1, position.Item2];
 				}
 			}
 		}
@@ -112,17 +99,22 @@ public partial class LevelCell : Node2D
 	/// <param name="tileSetRef">The reference id for the tileset to be used.</param>
 	/// <param name="coords">The position to place the tile on.</param>
 	/// <param name="atlasCoords">The atlas coordinates of the tile to draw.</param>
-	public void Place(int layer, int tileSetRef, Vector2I coords, Vector2I atlasCoords){
-		if (!tickets.ContainsKey(tileSetRef)){
-			AddTicket(tileSetRef);
+	public void Place(int layer, int tileSetRef, (int, int) coords, (int, int) atlasCoords){
+		Tile toPlace = new Tile(tileSetRef, atlasCoords.Item1, atlasCoords.Item2);
+		int code = GetTileAsCode(toPlace);
+		tiles[coords.Item1, coords.Item2, layer] = code;
+	}
+
+	public int GetTileAsCode(Tile input){
+		if (!tickets.ContainsKey(input.tileSetRef)){
+			AddTicket(input.tileSetRef);
 		}
-		tiles.SetCell
-		(
-			layer, 
-			coords, 
-			tickets[tileSetRef].GetAtlasId(),
-			atlasCoords
-		);
+		if (!tileToCodes.ContainsKey(input)){
+			int code = tileToCodes.Count();
+			tileToCodes.Add(input, code);
+			codesToTiles.Add(code, input);
+		}
+		return tileToCodes[input];
 	}
 
 	/// <summary>
@@ -152,7 +144,7 @@ public partial class LevelCell : Node2D
 	/// </summary>
 	/// <returns>An ordered byte array representing this object.</returns>
 	public byte[] Serialize(){
-		List<(int, List<Vector2I>)> tileSetSources = GetUniqueTileList();
+		List<(int, List<Tile>)> tileSetSources = GetUniqueTileList();
 		List<byte> headerEncoded = EncodeTileSourceHeader(tileSetSources);
 		List<byte> tileCodesBytes = EncodeTilesBody(tileSetSources);
 		List<byte> outputList = new List<byte>(tileCodesBytes.Count + headerEncoded.Count);
@@ -173,15 +165,15 @@ public partial class LevelCell : Node2D
 		LevelCell output = new LevelCell();
 		List<byte> bytes = new List<byte>(input);
 
-		(int, List<(int, List<Vector2I>)>) tileSetHeader = DecodeTileSourceHeader(bytes);
-		List<(int, List<Vector2I>)> tileSetSources = tileSetHeader.Item2;
+		(int, List<(int, List<Tile>)>) tileSetHeader = DecodeTileSourceHeader(bytes);
+		List<(int, List<Tile>)> tileSetSources = tileSetHeader.Item2;
 		bytes = bytes.GetRange(tileSetHeader.Item1, bytes.Count - tileSetHeader.Item1);
 
 		(int, List<int>) codesBody = DecodeTilesBody(bytes, tileSetSources);
 		List<int> codeList = codesBody.Item2;
 
-		Dictionary<(int, Vector2I), int> tileCodes = GetTileSetCodes(tileSetSources);
-		Dictionary<int, (int, Vector2I)> codesToTiles = tileCodes.ToDictionary((i) => i.Value, (i) => i.Key);
+		Dictionary<Tile, int> tileCodes = GetTileSetCodes(tileSetSources);
+		Dictionary<int, Tile> codesToTiles = tileCodes.ToDictionary((i) => i.Value, (i) => i.Key);
 		PlaceTileCodes(output, codesToTiles, codeList);
 		return output;
 	}
@@ -201,9 +193,9 @@ public partial class LevelCell : Node2D
 	/// <param name="tileSources">A list representing used tile sets, the first item in the tuple is
 	/// the tileSetRef and the second is a list of tile atlas coordinates.</param>
 	/// <returns></returns>
-	private List<byte> EncodeTileSourceHeader(List<(int, List<Vector2I>)> tileSources){
+	private List<byte> EncodeTileSourceHeader(List<(int, List<Tile>)> tileSources){
 		int outputSize = 4  + 8 * tileSources.Count;
-		foreach ((int, List<Vector2I>) tileSource in tileSources){
+		foreach ((int, List<Tile>) tileSource in tileSources){
 			outputSize += 2 * tileSource.Item2.Count;
 		}
 		List<byte> output = new List<byte>(outputSize);
@@ -212,8 +204,8 @@ public partial class LevelCell : Node2D
 			output.AddRange(BitConverter.GetBytes(tileSources[i].Item1));
 			output.AddRange(BitConverter.GetBytes(tileSources[i].Item2.Count));
 			for (int j = 0; j < tileSources[i].Item2.Count; j++){
-				output.Add((byte)tileSources[i].Item2[j].X);
-				output.Add((byte)tileSources[i].Item2[j].Y);
+				output.Add((byte)tileSources[i].Item2[j].atlasX);
+				output.Add((byte)tileSources[i].Item2[j].atlasY);
 			}
 		}
 		return output;
@@ -229,23 +221,23 @@ public partial class LevelCell : Node2D
 	/// <param name="bytes">A list of bytes to be decoded.</param>
 	/// <returns>A tuple consisting of an integer representing the next byte to read, and a list 
 	/// representing the TileSourceHeader.</returns>
-	private static (int, List<(int, List<Vector2I>)>) DecodeTileSourceHeader(List<byte> bytes){
+	private static (int, List<(int, List<Tile>)>) DecodeTileSourceHeader(List<byte> bytes){
 		int readHead = 0;
 		int sourcesCount = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
 		readHead += 4;
-		List<(int, List<Vector2I>)> output = new List<(int, List<Vector2I>)>(sourcesCount);
+		List<(int, List<Tile>)> output = new List<(int, List<Tile>)>(sourcesCount);
 		for (int i = 0; i < sourcesCount; i++){
 			int tileId = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
 			readHead += 4;
 			int uniqueTiles = BitConverter.ToInt32(bytes.GetRange(readHead, 4).ToArray());
 			readHead += 4;
-			List<Vector2I> tileList = new List<Vector2I>();
+			List<Tile> tileList = new List<Tile>();
 			for (int j = 0; j < uniqueTiles; j++){
 				int X = bytes[readHead];
 				readHead++;
 				int Y = bytes[readHead];
 				readHead++;
-				tileList.Add(new Vector2I(X,Y));
+				tileList.Add(new Tile(tileId, X, Y));
 			}
 			output.Add((tileId, tileList));
 		}
@@ -258,8 +250,8 @@ public partial class LevelCell : Node2D
 	/// </summary>
 	/// <param name="tileSources">The list of sources, see <see cref="GetUniqueTileList"/> </param>
 	/// <returns>A list of bytes representing the tiles in this <c>LevelCell</c></returns>
-	private List<byte> EncodeTilesBody(List<(int, List<Vector2I>)> tileSources){
-		Dictionary<(int, Vector2I), int> uniqueTiles = GetTileSetCodes(tileSources);
+	private List<byte> EncodeTilesBody(List<(int, List<Tile>)> tileSources){
+		Dictionary<Tile, int> uniqueTiles = GetTileSetCodes(tileSources);
 		int tileBits = SerializationHelper.RepresentativeBits(uniqueTiles.Count);
 		List<int> tileCodes = GetTilesAsCodeArray(uniqueTiles);
 		List<int> tileCodes8Bit = SerializationHelper.ConvertBetweenCodes(tileCodes, tileBits, 8);
@@ -276,10 +268,10 @@ public partial class LevelCell : Node2D
 	/// <param name="input">The bytes to be decoded.</param>
 	/// <param name="tileSources">The list of sources, see <see cref="GetUniqueTileList"/></param>
 	/// <returns>A list of tile codes, see <see cref="GetTilesAsCodeArray"/> </returns>
-	private static (int, List<int>) DecodeTilesBody(List<byte> input, List<(int, List<Vector2I>)> tileSources){
+	private static (int, List<int>) DecodeTilesBody(List<byte> input, List<(int, List<Tile>)> tileSources){
 		int totalTiles = 1;
-		foreach ((int, List<Vector2I>) entry in tileSources){
-			foreach (Vector2I uniqueTile in entry.Item2){
+		foreach ((int, List<Tile>) entry in tileSources){
+			foreach (Tile uniqueTile in entry.Item2){
 				totalTiles++;
 			}
 		}
@@ -309,35 +301,18 @@ public partial class LevelCell : Node2D
 	/// </summary>
 	/// <param name="uniqueTiles">A dictionary of unique tiles and their tile identifier codes.</param>
 	/// <returns>A list of tile identifier codes as described above.</returns>
-	private List<int> GetTilesAsCodeArray(Dictionary<(int, Vector2I), int> uniqueTiles){
+	private List<int> GetTilesAsCodeArray(Dictionary<Tile, int> uniqueTiles){
 		List<int> tileCodes = new List<int>();
 		for (int i = 0; i < numLayers; i++){
 			for (int j = 0; j < Width; j++){
 				for (int k = 0; k < Height; k++){
-					(int, Vector2I) tileIdentifier = GetTileIdentifier(i, new Vector2I(j, k));
+					Tile tileIdentifier = GetTile((j,k), i);
 					int currentCode = uniqueTiles[tileIdentifier];
 					tileCodes.Add(currentCode);
 				}
 			}
 		}
 		return tileCodes;
-	}
-
-	/// <summary>
-	/// Returns the tile identifier for a specific tile. Represented by a tuple with the
-	/// following format <c> (int tileSetRef, Vector2I atlasCoords) </c>
-	/// </summary>
-	/// <param name="layer">The layer of the specified tile.</param>
-	/// <param name="coords">The position of the specified tile.</param>
-	/// <returns>A tuple with the format specified above.</returns>
-	private (int, Vector2I) GetTileIdentifier(int layer, Vector2I coords){
-		int sourceId = tiles.GetCellSourceId(layer, coords);
-		if (sourceId == -1){
-			return (-1, new Vector2I(-1, -1));
-		}
-		int sourceRef = atlasCodesToRef[sourceId];
-		Vector2I atlasCoords = tiles.GetCellAtlasCoords(layer, coords);
-		return (sourceRef, atlasCoords);
 	}
 
 	/// <summary>
@@ -350,16 +325,22 @@ public partial class LevelCell : Node2D
 	private static void PlaceTileCodes
 	(
 		LevelCell toModify, 
-		Dictionary<int, (int, Vector2I)> codesToTiles,
+		Dictionary<int, Tile> codesToTiles,
 		List<int> codeList
 	){
 		for (int i = 0; i < codeList.Count; i++){
 			int layer = i / (Width * Height);
 			int X = i / Height % Width;
 			int Y = i % Height;
-			(int, Vector2I) currentTile = codesToTiles[codeList[i]];
-			if (currentTile.Item1 >= 0){
-				toModify.Place(layer, currentTile.Item1, new Vector2I(X, Y), currentTile.Item2);
+			Tile currentTile = codesToTiles[codeList[i]];
+			if (currentTile.tileSetRef >= 0){
+				toModify.Place
+				(
+					layer, 
+					currentTile.tileSetRef, 
+					(X, Y), 
+					(currentTile.atlasX, currentTile.atlasY)
+				);
 			}
 		}
 	}
@@ -372,32 +353,32 @@ public partial class LevelCell : Node2D
 	/// </para>
 	/// </summary>
 	/// <returns>A dictionary with the above referenced structure.</returns>
-	private List<(int, List<Vector2I>)> GetUniqueTileList(){
-		Dictionary<int, HashSet<Vector2I>> tilesByTileSet = new Dictionary<int, HashSet<Vector2I>>();
+	private List<(int, List<Tile>)> GetUniqueTileList(){
+		Dictionary<int, HashSet<Tile>> tilesByTileSet = new Dictionary<int, HashSet<Tile>>();
 		// Count all the unique tiles, grouped into sets by tileSet
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
 				for (int k = 0; k < numLayers; k++){
-					(int, Vector2I) tileType = GetTileIdentifier(k, new Vector2I(i, j));
-					if (tileType.Item1 == -1){
+					Tile tileType = GetTile((i, j), k);
+					if (tileType.tileSetRef == -1){
 						break;
 					}
 					// Add in a new tileSet for the given tileSetRef and initializes an empty hashset
-					if (!tilesByTileSet.ContainsKey(tileType.Item1)){
-						HashSet<Vector2I> tilesForCurrentTileSet = new HashSet<Vector2I>();
-						tilesByTileSet.Add(tileType.Item1, tilesForCurrentTileSet);
+					if (!tilesByTileSet.ContainsKey(tileType.tileSetRef)){
+						HashSet<Tile> tilesForCurrentTileSet = new HashSet<Tile>();
+						tilesByTileSet.Add(tileType.tileSetRef, tilesForCurrentTileSet);
 					}
-					if (!tilesByTileSet[tileType.Item1].Contains(tileType.Item2)){
-						tilesByTileSet[tileType.Item1].Add(tileType.Item2);
+					if (!tilesByTileSet[tileType.tileSetRef].Contains(tileType)){
+						tilesByTileSet[tileType.tileSetRef].Add(tileType);
 					}
 				}
 			}
 		}
-		List<(int, List<Vector2I>)> tileSetSourceList = new List<(int, List<Vector2I>)>(tilesByTileSet.Count);
+		List<(int, List<Tile>)> tileSetSourceList = new List<(int, List<Tile>)>(tilesByTileSet.Count);
 		int currentSource = 0;
-		foreach (KeyValuePair<int, HashSet<Vector2I>> tileSet in tilesByTileSet){
-			tileSetSourceList.Add((tileSet.Key, new List<Vector2I>(tileSet.Value.Count)));
-			foreach (Vector2I uniqueTile in tileSet.Value){
+		foreach (KeyValuePair<int, HashSet<Tile>> tileSet in tilesByTileSet){
+			tileSetSourceList.Add((tileSet.Key, new List<Tile>(tileSet.Value.Count)));
+			foreach (Tile uniqueTile in tileSet.Value){
 				tileSetSourceList[currentSource].Item2.Add(uniqueTile);
 			}
 			currentSource++;
@@ -414,12 +395,12 @@ public partial class LevelCell : Node2D
 	/// </summary>
 	/// <param name="sourcesList">The sources list, see <see cref="GetUniqueTileList"/> </param>
 	/// <returns>A dictionary associating tiles with a unique identifier.</returns>
-	private static Dictionary<(int, Vector2I), int> GetTileSetCodes(List<(int, List<Vector2I>)> sourcesList){
-		Dictionary<(int, Vector2I), int> tileCodes = GetDefaultTileCodeDictionary();
+	private static Dictionary<Tile, int> GetTileSetCodes(List<(int, List<Tile>)> sourcesList){
+		Dictionary<Tile, int> tileCodes = GetDefaultTileCodeDictionary();
 		int currentCode = tileCodes.Count;
 		for (int i = 0; i < sourcesList.Count; i++){
 			for (int j = 0; j < sourcesList[i].Item2.Count; j++){
-				tileCodes.Add((sourcesList[i].Item1, sourcesList[i].Item2[j]), currentCode);
+				tileCodes.Add(sourcesList[i].Item2[j], currentCode);
 				currentCode++;
 			}
 		}
@@ -431,9 +412,9 @@ public partial class LevelCell : Node2D
 	/// special tile (-1, (-1, -1)) associated with id 0.
 	/// </summary>
 	/// <returns>A dictionary as described above.</returns>
-	private static Dictionary<(int, Vector2I), int> GetDefaultTileCodeDictionary(){
-		Dictionary<(int, Vector2I), int> tileCodes = new Dictionary<(int, Vector2I), int>{
-			{(-1, new Vector2I(-1, -1)), 0}
+	private static Dictionary<Tile, int> GetDefaultTileCodeDictionary(){
+		Dictionary<Tile, int> tileCodes = new Dictionary<Tile, int>{
+			{Tile.EmptyTile, 0}
 		};
 		return tileCodes;
 	}

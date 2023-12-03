@@ -126,9 +126,6 @@ public partial class TileSetManager : Node
 		}
 		if (!atlasSources.ContainsKey(tileSetRef)){
 			atlasSources.Add(tileSetRef, atlasSourceHead);
-			foreach (KeyValuePair<int,int> entry in atlasSources){
-				Debug.Print("TileSetManager: Atlas source contains entry {0} -> {1}", entry.Key, entry.Value);
-			}
 			atlasSourceHead++;
 			MergeTileSet(tileSetRef);
 		}

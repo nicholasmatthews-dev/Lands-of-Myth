@@ -17,6 +17,11 @@ public class Tile{
         atlasY = Y;
     }
 
+    public void PopulateTileData(TileSetManager tileSetManager){
+        tileData = tileSetManager.GetTileData(this);
+        isSolid = tileData.GetCustomData("Solid").AsBool();
+    }
+
     public override bool Equals(object obj)
     {
         if (obj is not Tile){
@@ -24,11 +29,6 @@ public class Tile{
         }
         Tile other = (Tile)obj;
         return (other.tileSetRef, other.atlasX, other.atlasY).Equals((tileSetRef, atlasX, atlasY));
-    }
-
-    public void PopulateTileData(TileSetManager tileSetManager){
-        tileData = tileSetManager.GetTileData(this);
-        isSolid = tileData.GetCustomData("Solid").AsBool();
     }
 
     public override int GetHashCode()

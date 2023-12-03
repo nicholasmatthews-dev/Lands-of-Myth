@@ -7,7 +7,7 @@ namespace LOM.Levels;
 public partial class LevelCellNode : Node2D {
 
     public LevelCell referenceCell;
-    private static int tilesPerFrame = 250;
+    private static int tilesPerFrame = 1000;
     private TileMap tileMap = new();
 
     public LevelCellNode(LevelCell referenceCell) : base(){

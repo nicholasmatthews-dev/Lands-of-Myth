@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace LOM.Levels;
 
@@ -103,6 +104,15 @@ public partial class TileSetManager : Node
 		return code;
 	}
 
+	public TileData GetTileData(Tile tile){
+		if (!atlasSources.ContainsKey(tile.tileSetRef)){
+			throw new ArgumentException("TilesetRef " + tile.tileSetRef + " is not associated with an atlas source.");
+		}
+		int atlasSource = atlasSources[tile.tileSetRef];
+		TileSetAtlasSource tileSetAtlasSource = (TileSetAtlasSource)masterTileSet.GetSource(atlasSource);
+		return tileSetAtlasSource.GetTileData(new Vector2I(tile.atlasX, tile.atlasY), 0);
+	}
+
 	public TileSetTicket GetTileSetTicket(int tileSetRef){
 		return new Ticket(this, tileSetRef);
 	}
@@ -116,6 +126,9 @@ public partial class TileSetManager : Node
 		}
 		if (!atlasSources.ContainsKey(tileSetRef)){
 			atlasSources.Add(tileSetRef, atlasSourceHead);
+			foreach (KeyValuePair<int,int> entry in atlasSources){
+				Debug.Print("TileSetManager: Atlas source contains entry {0} -> {1}", entry.Key, entry.Value);
+			}
 			atlasSourceHead++;
 			MergeTileSet(tileSetRef);
 		}
@@ -146,6 +159,7 @@ public partial class TileSetManager : Node
 		tileSetClients[tileSetRef]--;
 		if (tileSetClients[tileSetRef] == 0){
 			masterTileSet.RemoveSource(atlasSources[tileSetRef]);
+			atlasSources.Remove(tileSetRef);
 		}
 	}
 

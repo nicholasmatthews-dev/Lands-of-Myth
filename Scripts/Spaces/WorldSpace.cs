@@ -65,18 +65,18 @@ public class WorldSpace : Space {
     /// space.</param>
     /// <returns>A newly generated <c>LevelCell</c> at the given coordinates.</returns>
     private LevelCell GenerateNewCell(Vector2I coords){
-        int forestRefId = Main.tileSetManager.GetTileSetCode("Forest");
+        int forestRefId = GameModel.tileSetManager.GetTileSetCode("Forest");
         LevelCell newCell = new LevelCell();
-        (int, int) fill;
+        Tile fill;
         if ((coords.X + coords.Y) % 2 == 0){
-            fill = (0,0);
+            fill = new(forestRefId, 0, 0);
         }
         else{
-            fill = (2,1);
+            fill = new(forestRefId, 2, 1);
         }
         for (int i = 0; i < LevelCell.Width; i++){
             for (int j = 0; j < LevelCell.Height; j++){
-                newCell.Place(0, forestRefId, (i, j), fill);
+                newCell.Place(0, (i, j), fill);
             }
         }
         if (coords.X == 0 && coords.Y == 0){
@@ -90,7 +90,7 @@ public class WorldSpace : Space {
     /// </summary>
     /// <param name="input">The <c>LevelCell</c> to be modified.</param>
     private void AddStructure(ref LevelCell input){
-		int buildingsRefId = Main.tileSetManager.GetTileSetCode("Elf_Buildings");
+		int buildingsRefId = GameModel.tileSetManager.GetTileSetCode("Elf_Buildings");
 		TileMap houses = (TileMap)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
 		.Instantiate();
@@ -98,7 +98,8 @@ public class WorldSpace : Space {
 			for (int j = 0; j < LevelCell.Height; j++){
 				for (int k = 0; k < 2; k++){
 					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-					input.Place(k + 1, buildingsRefId, (i,j), (atlasCoords.X, atlasCoords.Y));
+                    Tile toPlace = new(buildingsRefId, atlasCoords.X, atlasCoords.Y);
+                    input.Place(k + 1, (i,j), toPlace);
 				}
 			}
 		}

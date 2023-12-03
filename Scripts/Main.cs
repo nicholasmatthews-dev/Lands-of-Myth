@@ -10,7 +10,6 @@ public partial class Main : Node2D
 	public static Movement movement;
 	private Node2D character;
 	private LevelManagerNode levelManager;
-	public static TileSetManager tileSetManager = new TileSetManager();
 	public static GameModel gameModel = new();
 	public static World world = new World("New World");
 	// Called when the node enters the scene tree for the first time.
@@ -35,7 +34,7 @@ public partial class Main : Node2D
 		movement.Target = character;
 		movement.ActiveLevel = GameModel.levelManager;
 		
-		AddChild(tileSetManager);
+		AddChild(GameModel.tileSetManager);
 		AddChild(levelManager);
 		AddChild(character);
 		AddChild(movement);

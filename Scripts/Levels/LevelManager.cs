@@ -46,6 +46,7 @@ public partial class LevelManager : PositionUpdateListener
 	public LevelManager(){
 		activeSpace = new WorldSpace();
 		ChangeLoadedCells(lastPosition);
+		Main.movement.AddPositionUpdateListener(this);
 	}
 
 	public void OnPositionUpdate(Vector2I coords){
@@ -63,7 +64,7 @@ public partial class LevelManager : PositionUpdateListener
 	/// cells which were previously outside of the space will be unloaded.
 	/// </para>
 	/// </summary>
-	/// <param name="coords"></param>
+	/// <param name="coords">The new coordinates of the center of the loaded cells.</param>
 	private void ChangeLoadedCells(Vector2I coords){
 		List<Vector2I> cellsToRemove = new List<Vector2I>(9);
 		foreach (KeyValuePair<Vector2I, LevelCell> entry in activeCells){

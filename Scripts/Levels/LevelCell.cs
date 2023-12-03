@@ -109,11 +109,11 @@ public partial class LevelCell
 	/// <param name="tileSetRef">The reference id for the tileset to be used.</param>
 	/// <param name="coords">The position to place the tile on.</param>
 	/// <param name="atlasCoords">The atlas coordinates of the tile to draw.</param>
-	public void Place(int layer, int tileSetRef, (int, int) coords, (int, int) atlasCoords){
-		Tile toPlace = new Tile(tileSetRef, atlasCoords.Item1, atlasCoords.Item2);
+	public void Place(int layer, (int, int) coords, Tile toPlace){
 		int code = GetTileAsCode(toPlace);
 		Tile permTile = codesToTiles[code];
 		tiles[coords.Item1, coords.Item2, layer] = code;
+		Solid[coords.Item1,coords.Item2] = Solid[coords.Item1, coords.Item2] || permTile.isSolid;
 		tileUpdates.Enqueue(((coords.Item1, coords.Item2, layer), permTile));
 	}
 
@@ -122,14 +122,15 @@ public partial class LevelCell
 	/// If no code currently exists, the a new code will be created and associated with
 	/// this tile.
 	/// </summary>
-	/// <param name="input"></param>
-	/// <returns></returns>
+	/// <param name="input">The tile to input</param>
+	/// <returns>The code associated with this tile.</returns>
 	public int GetTileAsCode(Tile input){
 		if (!tickets.ContainsKey(input.tileSetRef)){
 			AddTicket(input.tileSetRef);
 		}
 		if (!tileToCodes.ContainsKey(input)){
 			int code = tileToCodes.Count();
+			input.PopulateTileData(GameModel.tileSetManager);
 			tileToCodes.Add(input, code);
 			codesToTiles.Add(code, input);
 		}
@@ -356,9 +357,8 @@ public partial class LevelCell
 				toModify.Place
 				(
 					layer, 
-					currentTile.tileSetRef, 
 					(X, Y), 
-					(currentTile.atlasX, currentTile.atlasY)
+					currentTile
 				);
 			}
 		}

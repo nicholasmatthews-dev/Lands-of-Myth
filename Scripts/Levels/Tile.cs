@@ -1,4 +1,5 @@
 using System;
+using Godot;
 
 namespace LOM.Levels;
 
@@ -8,6 +9,7 @@ public class Tile{
     public readonly int atlasX;
     public readonly int atlasY;
     public bool isSolid = false;
+    private TileData tileData;
 
     public Tile(int tileSet, int X, int Y){
         tileSetRef = tileSet;
@@ -22,6 +24,11 @@ public class Tile{
         }
         Tile other = (Tile)obj;
         return (other.tileSetRef, other.atlasX, other.atlasY).Equals((tileSetRef, atlasX, atlasY));
+    }
+
+    public void PopulateTileData(TileSetManager tileSetManager){
+        tileData = tileSetManager.GetTileData(this);
+        isSolid = tileData.GetCustomData("Solid").AsBool();
     }
 
     public override int GetHashCode()

@@ -37,12 +37,26 @@ public partial class LevelCell
 	/// otherwise.
 	/// </summary>
 	private bool[,] Solid = new bool[Width, Height];
+	/// <summary>
+	/// Represents the tiles in this <c>LevelCell</c> ordered as [X, Y, Layer]. Tiles are 
+	/// represented as codes given by the mapping in codesToTiles.
+	/// </summary>
 	private int[,,] tiles = new int[Width, Height, numLayers];
+	/// <summary>
+	/// Represents a mapping between different <c>Tile</c> types and their internal code representation.
+	/// </summary>
 	private Dictionary<Tile, int> tileToCodes = GetDefaultTileCodeDictionary();
+	/// <summary>
+	/// Represents a mapping between the internal codes and a given <c>Tile</c> type.
+	/// </summary>
 	private Dictionary<int, Tile> codesToTiles = new(){
 		{0, Tile.EmptyTile}
 	};
 
+	/// <summary>
+	/// Holds all the updates to the <c>Tiles</c> in this <c>LevelCell</c> given as a tuple with the format 
+	/// ((X, Y, Layer), PlacedTile). Meant to be consumed by a listener such as <c>LevelCellNode</c>.
+	/// </summary>
 	public ConcurrentQueue<((int, int, int), Tile)> tileUpdates = new();
 
 	public LevelCell(){

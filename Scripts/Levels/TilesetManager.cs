@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace LOM.Levels;
 
@@ -50,7 +51,6 @@ public partial class TileSetManager : Node
 	private static readonly string basePath = "res://Tilesets/";
 	private static readonly string fileExtension = ".tres";
 	private static readonly string defaultTileSetName = "Default";
-	//private TileSet defaultTileSet;
 	private Dictionary<string, int> tileSetCodes = new Dictionary<string, int>(){
 		{"Forest", 1},
 		{"Elf_Buildings", 2}
@@ -68,10 +68,12 @@ public partial class TileSetManager : Node
 	/// Counts the number of clients for a given <c>TileSet</c> as indicated by <c>tileSetCode</c>.
 	/// </summary>
 	private Dictionary<int, int> tileSetClients = new Dictionary<int, int>();
+	/// <summary>
+	/// The single TileSet in which all the TileSets for each 
+	/// </summary>
 	private TileSet masterTileSet;
 
 	public TileSetManager() : base() {
-		//defaultTileSet = ResourceLoader.Load<TileSet>(basePath + "Default" + fileExtension);
 		masterTileSet = ResourceLoader.Load<TileSet>
 		(
 			basePath + defaultTileSetName + fileExtension,
@@ -103,10 +105,33 @@ public partial class TileSetManager : Node
 		return code;
 	}
 
+	/// <summary>
+	/// Gets the TileData associate with a given Tile from the master TileSet.
+	/// </summary>
+	/// <param name="tile">The Tile to get data for.</param>
+	/// <returns>The TileData associated with the given Tile.</returns>
+	/// <exception cref="ArgumentException">If the Tile's tileSetRef doesn't correspond to a 
+	/// source in atlasSources.</exception>
+	public TileData GetTileData(Tile tile){
+		if (!atlasSources.ContainsKey(tile.tileSetRef)){
+			throw new ArgumentException("TilesetRef " + tile.tileSetRef + " is not associated with an atlas source.");
+		}
+		int atlasSource = atlasSources[tile.tileSetRef];
+		TileSetAtlasSource tileSetAtlasSource = (TileSetAtlasSource)masterTileSet.GetSource(atlasSource);
+		return tileSetAtlasSource.GetTileData(new Vector2I(tile.atlasX, tile.atlasY), 0);
+	}
+
 	public TileSetTicket GetTileSetTicket(int tileSetRef){
 		return new Ticket(this, tileSetRef);
 	}
 
+	/// <summary>
+	/// Adds a client for the given TileSet. If the TileSet is not currently loaded, it will be
+	/// loaded and merged into the masterTileSet.
+	/// </summary>
+	/// <param name="tileSetRef">The tileSetRef of the TileSet the client is requesting.</param>
+	/// <exception cref="ArgumentException">If the tileSetRef does not correspond to a 
+	/// named TileSet.</exception>
 	private void AddClient(int tileSetRef){
 		if (!codesToTileSets.ContainsKey(tileSetRef)){
 			throw new ArgumentException
@@ -130,6 +155,13 @@ public partial class TileSetManager : Node
 		}
 	}
 
+	/// <summary>
+	/// Removes a client for a given TileSet. Will remove the TileSet from the masterTileSet if no
+	/// clients remain for that TileSet.
+	/// </summary>
+	/// <param name="tileSetRef">The tileSetRef of the TileSet of the removed client.</param>
+	/// <exception cref="ArgumentException">If the tileSetRef is not in atlasSources or if 
+	/// tileSetClients does not contain it.</exception>
 	private void RemoveClient(int tileSetRef){
 		if (!atlasSources.ContainsKey(tileSetRef)){
 			throw new ArgumentException
@@ -146,9 +178,16 @@ public partial class TileSetManager : Node
 		tileSetClients[tileSetRef]--;
 		if (tileSetClients[tileSetRef] == 0){
 			masterTileSet.RemoveSource(atlasSources[tileSetRef]);
+			atlasSources.Remove(tileSetRef);
 		}
 	}
 
+	/// <summary>
+	/// Merges a TileSet into masterTileSet.
+	/// </summary>
+	/// <param name="tileSetRef">The tileSetRef of the TileSet to merge.</param>
+	/// <exception cref="ArgumentException">If the tileSetRef doesn't correspond to a named
+	/// TileSet or if it has not been assigned an atlas source id.</exception>
 	private void MergeTileSet(int tileSetRef){
 		if (!codesToTileSets.ContainsKey(tileSetRef)){
 			throw new ArgumentException

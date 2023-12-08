@@ -3,22 +3,22 @@ using LOM.Spaces;
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace LOM.Levels;
 
-public partial class LevelManager : Node2D, PositionUpdateListener
+public partial class LevelManager : PositionUpdateListener
 {
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>
-	public int TileHeight = 16;
+	public static int TileHeight = 16;
 
 	/// <summary>
 	/// The width of a signle tile in the tileset (in pixels).
 	/// </summary>
-	public int TileWidth = 16;
+	public static int TileWidth = 16;
 
 	/// <summary>
 	/// The height of a single map cell (in tiles).
@@ -30,38 +30,96 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// </summary>
 	public static int CellWidth = 64;
 
+	/// <summary>
+	/// The currently active space that this LevelManager is representing.
+	/// </summary>
 	private Space activeSpace;
 
+	/// <summary>
+	/// The last center (in cell coordinates) for the LevelManager's loaded cells.
+	/// </summary>
 	private Vector2I lastPosition = new(0,0);
 
 	/// <summary>
 	/// The collection of active map cells, 
 	/// indexed by their position (counted by number of cells from the origin).
 	/// </summary>
-	private Dictionary<Vector2I,LevelCell> activeCells = new Dictionary<Vector2I, LevelCell>();
+	private ConcurrentDictionary<Vector2I,LevelCell> activeCells = new();
 
-	public LevelManager() : base(){
+	/// <summary>
+	/// A queue that holds all the updates to levelCells that have not been processed by the node
+	/// which listens to this object. The form is (bool removed, Vector2I coords, LevelCell newCell).
+	/// </summary>
+	public ConcurrentQueue<(bool, Vector2I, LevelCell)> levelCellUpdates = new();
+
+	/// <summary>
+	/// The thread which handles all the processing for this LevelManager, this is to keep the
+	/// execution time of loading and saving cells from impacting frame rate.
+	/// </summary>
+	private Thread processThread;
+	/// <summary>
+	/// Whether the process thread should be kept alive or finish its work after its next cycle.
+	/// </summary>
+	private bool keepAlive = true;
+	/// <summary>
+	/// A lock used to acquire read/write access to new position.
+	/// </summary>
+	private object newPositionLock = new();
+	/// <summary>
+	/// The newest position from OnPositionUpdate.
+	/// </summary>
+	private Vector2I newPosition = new(0,0);
+	/// <summary>
+	/// The handle for registering whether the thread should be resumed to respond to a position update.
+	/// </summary>
+	private EventWaitHandle positionUpdateHandle = new(false, EventResetMode.AutoReset);
+
+	public LevelManager(){
 		activeSpace = new WorldSpace();
-	}
-
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
 		ChangeLoadedCells(lastPosition);
 		Main.movement.AddPositionUpdateListener(this);
+        processThread = new Thread(Process)
+        {
+            IsBackground = true,
+			Name = "LevelManagerProcess"
+        };
+        processThread.Start();
 	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
+	/// <summary>
+	/// The core functionality of the thread for this LevelManager, waits until a position update
+	/// is signaled and then handles the position update.
+	/// </summary>
+	private void Process(){
+		while (true){
+			positionUpdateHandle.WaitOne();
+			HandlePositionUpdate();
+			positionUpdateHandle.Reset();
+			if (!keepAlive){
+				return;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Handles the last position update to occur, will change the loaded cells to center on the
+	/// new position if it differs from the previous center.
+	/// </summary>
+	public void HandlePositionUpdate(){
+		lock(newPositionLock){
+			if (newPosition != lastPosition){
+				lastPosition = newPosition;
+				ChangeLoadedCells(lastPosition);
+			}
+		}
 	}
 
 	public void OnPositionUpdate(Vector2I coords){
 		List<Vector2I> translatedCoords = TranslateCoords(coords);
-		if (translatedCoords[0] != lastPosition){
-			lastPosition = translatedCoords[0];
-			ChangeLoadedCells(lastPosition);
+		lock(newPositionLock){
+			newPosition = translatedCoords[0];
 		}
+		positionUpdateHandle.Set();
 	}
 
 	/// <summary>
@@ -71,12 +129,13 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// cells which were previously outside of the space will be unloaded.
 	/// </para>
 	/// </summary>
-	/// <param name="coords"></param>
+	/// <param name="coords">The new coordinates of the center of the loaded cells.</param>
 	private void ChangeLoadedCells(Vector2I coords){
 		List<Vector2I> cellsToRemove = new List<Vector2I>(9);
 		foreach (KeyValuePair<Vector2I, LevelCell> entry in activeCells){
 			if (Math.Abs(coords.X - entry.Key.X) > 1){
 				cellsToRemove.Add(entry.Key);
+				levelCellUpdates.Enqueue((true, entry.Key, null));
 			}
 		}
 		foreach (Vector2I entry in cellsToRemove){
@@ -108,13 +167,8 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// <param name="coords">The coordinates (given in the cell grid space).</param>
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
 	private void AddActiveCell(Vector2I coords, LevelCell levelCell){
-		AddChild(levelCell);
-		activeCells.Add(coords, levelCell);
-		levelCell.Position = new Vector2
-		(
-			TileWidth * CellWidth * coords.X,
-			TileHeight * CellHeight * coords.Y
-		);
+		activeCells.TryAdd(coords, levelCell);
+		levelCellUpdates.Enqueue((false, coords, levelCell));
 	}
 
 	/// <summary>
@@ -123,17 +177,22 @@ public partial class LevelManager : Node2D, PositionUpdateListener
 	/// <param name="coords">The coordinates of the cell to unload.</param>
 	private void DisposeOfCell(Vector2I coords){
 		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
-		activeCells[coords].Free();
-		activeCells.Remove(coords);
+        activeCells.Remove(coords, out _);
 	}
 
+	/// <summary>
+	/// Returns whether or not a position is able to be occupied, given a collection of
+	/// cooridinates representing the tiles to be occupied.
+	/// </summary>
+	/// <param name="occupied">The positions to check to see if they are valid.</param>
+	/// <returns>True if the full collection of positions are all unoccupied, false otherwise.</returns>
 	public bool PositionValid(ICollection<Vector2I> occupied){
 		bool valid = true;
 		foreach (Vector2I position in occupied){
 			List<Vector2I> cellCoords = TranslateCoords(position);
-			List<Vector2I> toCheck = new List<Vector2I>
+			List<(int, int)> toCheck = new List<(int, int)>
             {
-                cellCoords[1]
+                (cellCoords[1].X, cellCoords[1].Y)
             };
 			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
 		}

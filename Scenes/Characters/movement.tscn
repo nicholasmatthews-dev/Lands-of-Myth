@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://5tsagq143rpe"]
+
+[ext_resource type="Script" path="res://Scripts/Control/Movement.cs" id="1_i2sn6"]
+
+[node name="Movement" type="Node"]
+script = ExtResource("1_i2sn6")
+Speed = 128
+Width = 2
+Height = 2

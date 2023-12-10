@@ -1,0 +1,5 @@
+[gd_resource type="TileSet" format=3 uid="uid://cv1uepnwpcuyg"]
+
+[resource]
+custom_data_layer_0/name = "Solid"
+custom_data_layer_0/type = 1

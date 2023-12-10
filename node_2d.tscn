@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://jyo00nekhkbx"]
+
+[ext_resource type="Script" path="res://Scripts/Main.cs" id="1_8mikt"]
+
+[node name="Node2D" type="Node2D"]
+texture_filter = 1
+scale = Vector2(8, 8)
+script = ExtResource("1_8mikt")

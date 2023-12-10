@@ -1,0 +1,14 @@
+# Godot 4+ specific ignores
+.godot/
+#.vs/
+#.vscode/
+#Characters/
+#Tilesets/
+#Scenes/
+#.gitattributes
+#.gitignore
+#icon.svg*
+#Lands Of Myth.csproj
+#Lands Of Myth.sln
+#node_2d.tscn
+#project.godot

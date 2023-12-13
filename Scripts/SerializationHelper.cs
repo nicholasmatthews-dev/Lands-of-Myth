@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 public static class SerializationHelper {
 	/// <summary>
@@ -114,6 +115,41 @@ public static class SerializationHelper {
 
 	public static int RepresentativeBits(int input){
 		return (int)Math.Ceiling(Math.Log2(input));
+	}
+
+	public static void AppendBytes(ref byte[] bytes, byte[] toAdd, ref int byteHead){
+		for (int i = 0; i < toAdd.Length; i++){
+			bytes[byteHead] = toAdd[i];
+			byteHead++;
+		}
+	}
+
+	public static byte[] ReadBytes(byte[] bytes, int toRead, ref int byteHead){
+		byte[] output = new byte[toRead];
+		for (int i = 0; i < toRead; i++){
+			output[i] = bytes[byteHead];
+			byteHead++;
+		}
+		return output;
+	}
+
+	public static void StoreInt(ref byte[] bytes, int toAdd, ref int byteHead){
+		AppendBytes(ref bytes, BitConverter.GetBytes(toAdd), ref byteHead);
+	}
+
+	public static int ReadInt(byte[] bytes, ref int byteHead){
+		return BitConverter.ToInt32(ReadBytes(bytes, 4, ref byteHead));
+	}
+
+	public static void StoreString(ref byte[] bytes, string toAdd, ref int byteHead){
+		StoreInt(ref bytes, toAdd.Length, ref byteHead);
+		AppendBytes(ref bytes, Encoding.ASCII.GetBytes(toAdd), ref byteHead);
+	}
+
+	public static string ReadString(byte[] bytes, ref int byteHead){
+		int stringLength = ReadInt(bytes, ref byteHead);
+		byte[] stringBytes = ReadBytes(bytes, stringLength, ref byteHead);
+		return Encoding.ASCII.GetString(stringBytes);
 	}
 
 }

@@ -103,9 +103,11 @@ public class WorldSpace : Space {
 		for (int i = 0; i < LevelCell.Width; i++){
 			for (int j = 0; j < LevelCell.Height; j++){
 				for (int k = 0; k < 2; k++){
-					Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-                    Tile toPlace = new(buildingsRefId, atlasCoords.X, atlasCoords.Y);
-                    input.Place(k + 1, (i,j), toPlace);
+                    if (houses.GetCellSourceId(k, new Vector2I(i,j)) != -1){
+                        Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
+                        Tile toPlace = new(buildingsRefId, atlasCoords.X, atlasCoords.Y);
+                        input.Place(k + 1, (i,j), toPlace);
+                    }
 				}
 			}
 		}

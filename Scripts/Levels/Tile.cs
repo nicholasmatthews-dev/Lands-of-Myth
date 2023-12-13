@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Godot;
 
 namespace LOM.Levels;
@@ -36,6 +37,11 @@ public class Tile{
         tileSetRef = tileSet;
         atlasX = X;
         atlasY = Y;
+        if ((atlasX < 0 || atlasY < 0) && tileSet != -1){
+            throw new ArgumentException(
+                "Tile: Tried to create tile with invalid atlas coords " + this
+            );
+        }
     }
 
     /// <summary>
@@ -48,6 +54,10 @@ public class Tile{
             return;
         }
         tileData = tileSetManager.GetTileData(this);
+        if (tileData is null){
+            Debug.Print("Tile: TileData for " + this + " is null.");
+            return;
+        }
         isSolid = tileData.GetCustomData("Solid").AsBool();
     }
 

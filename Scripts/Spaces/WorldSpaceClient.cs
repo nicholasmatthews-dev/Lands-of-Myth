@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Godot;
 using LOM.Levels;
 using LOM.Multiplayer;
@@ -15,7 +16,7 @@ public class WorldSpaceClient : Space, ENetPacketListener {
         netClient.AddPacketListener((int)ENetCommon.ChannelNames.Spaces, this);
     }
 
-    public override LevelCell GetLevelCell(Vector2I cellCoords)
+    public override Task<LevelCell> GetLevelCell(Vector2I cellCoords)
     {
         throw new System.NotImplementedException();
     }

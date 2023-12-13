@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LOM.Levels;
 
@@ -155,8 +156,15 @@ public partial class LevelManager : PositionUpdateListener
 	/// <param name="coords">The coordinates of the LevelCell to be loaded.</param>
 	private void LoadLevelCellFromSpace(Vector2I coords){
 		if (!activeCells.ContainsKey(coords)){
-			LevelCell loaded = activeSpace.GetLevelCell(coords);
-			AddActiveCell(coords, loaded);
+			Task.Run(() => {
+				Task<LevelCell> loadTask = activeSpace.GetLevelCell(coords);
+				loadTask.Wait();
+				LevelCell loaded = loadTask.Result;
+				AddActiveCell(coords, loaded);
+				loadTask.Dispose();
+			});
+			//LevelCell loaded = activeSpace.GetLevelCell(coords);
+			//AddActiveCell(coords, loaded);
 		}
 	}
 

@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 using LOM.Levels;
 
@@ -18,17 +19,21 @@ public class WorldSpace : Space {
         Debug.Print("WorldSpace: Error is " + error);
     }
 
-    public override LevelCell GetLevelCell(Vector2I coords){
-        using var file = FileAccess.OpenCompressed
+    public override Task<LevelCell> GetLevelCell(Vector2I coords){
+        FileAccess file = FileAccess.OpenCompressed
         (
             GetFullCellPathByCoords(coords), 
             FileAccess.ModeFlags.Read,
             compressionMode
         );
         if (file is null){
-            return GenerateNewCell(coords);
+            return Task.Run(() => {
+                return GenerateNewCell(coords);
+            });
         }
-        return LoadCellFromDisk(file);
+        return Task.Run(() => {
+            return LoadCellFromDisk(file);
+        });
     }
 
     public override void StoreBytesToCell(byte[] cellToStore, Vector2I coords){
@@ -55,6 +60,7 @@ public class WorldSpace : Space {
     private static LevelCell LoadCellFromDisk(FileAccess file){
         int bufferLength = (int)file.Get64();
         byte[] buffer = file.GetBuffer(bufferLength);
+        file.Close();
         return LevelCell.Deserialize(buffer);
     }
 

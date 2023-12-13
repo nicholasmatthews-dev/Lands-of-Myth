@@ -1,6 +1,7 @@
 using Godot;
 using LOM.Levels;
 using System;
+using System.Threading.Tasks;
 
 namespace LOM.Spaces;
 
@@ -13,7 +14,7 @@ public abstract class Space{
     /// </summary>
     /// <param name="cellCoords">The coordinates of the request in cell space.</param>
     /// <returns>The <c>LevelCell</c> at the given coordinates.</returns>
-    public abstract LevelCell GetLevelCell(Vector2I cellCoords);
+    public abstract Task<LevelCell> GetLevelCell(Vector2I cellCoords);
 
     /// <summary>
     /// Stores the given <c>LevelCell</c> (given as a byte array via <c>LevelCell.Serialize()</c>)

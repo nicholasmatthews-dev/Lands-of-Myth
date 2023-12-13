@@ -58,6 +58,7 @@ public partial class TileSetManager : Node
 
 	private Dictionary<int, string> codesToTileSets;
 
+	private Object atlasSourceLock = new();
 	/// <summary>
 	/// Describes the relationship between <c>tileSetCodes</c> (the permanent link to a tileset)
 	/// and the corresponding atlas position in the current <c>TileSet</c>.
@@ -117,8 +118,13 @@ public partial class TileSetManager : Node
 			throw new ArgumentException("TilesetRef " + tile.tileSetRef + " is not associated with an atlas source.");
 		}
 		int atlasSource = atlasSources[tile.tileSetRef];
-		TileSetAtlasSource tileSetAtlasSource = (TileSetAtlasSource)masterTileSet.GetSource(atlasSource);
-		return tileSetAtlasSource.GetTileData(new Vector2I(tile.atlasX, tile.atlasY), 0);
+		lock(atlasSourceLock){
+			//Debug.Print("TilesetManager: Attempting to get tile data for " + tile);
+			//Debug.Print("TilesetManager: Atlas source id is: " + atlasSource);
+			//Debug.Print("TilesetManager: Master tile set has " + masterTileSet.GetSourceCount() + " sources.");
+			TileSetAtlasSource tileSetAtlasSource = (TileSetAtlasSource)masterTileSet.GetSource(atlasSource);
+			return tileSetAtlasSource.GetTileData(new Vector2I(tile.atlasX, tile.atlasY), 0);
+		}
 	}
 
 	public TileSetTicket GetTileSetTicket(int tileSetRef){
@@ -139,10 +145,12 @@ public partial class TileSetManager : Node
 				"TileSetRef " + tileSetRef + " does not correspond to a valid TileSet."
 			);
 		}
-		if (!atlasSources.ContainsKey(tileSetRef)){
-			atlasSources.Add(tileSetRef, atlasSourceHead);
-			atlasSourceHead++;
-			MergeTileSet(tileSetRef);
+		lock (atlasSourceLock){
+			if (!atlasSources.ContainsKey(tileSetRef)){
+				atlasSources.Add(tileSetRef, atlasSourceHead);
+				atlasSourceHead++;
+				MergeTileSet(tileSetRef);
+			}
 		}
 		if (!tileSetClients.ContainsKey(tileSetRef)){
 			tileSetClients.Add(tileSetRef, 1);
@@ -190,24 +198,24 @@ public partial class TileSetManager : Node
 	/// TileSet or if it has not been assigned an atlas source id.</exception>
 	private void MergeTileSet(int tileSetRef){
 		if (!codesToTileSets.ContainsKey(tileSetRef)){
-			throw new ArgumentException
+				throw new ArgumentException
+				(
+					"TileSetRef " + tileSetRef + " does not correspond to a managed TileSet."
+				);
+			}
+			if (!atlasSources.ContainsKey(tileSetRef)){
+				throw new ArgumentException
+				(
+					"TileSetRef " + tileSetRef + " has not been assigned an atlas source id."
+				);
+			}
+			TileSet toAdd = ResourceLoader.Load<TileSet>
 			(
-				"TileSetRef " + tileSetRef + " does not correspond to a managed TileSet."
+				basePath + codesToTileSets[tileSetRef] + fileExtension,
+				null,
+				ResourceLoader.CacheMode.Ignore
 			);
-		}
-		if (!atlasSources.ContainsKey(tileSetRef)){
-			throw new ArgumentException
-			(
-				"TileSetRef " + tileSetRef + " has not been assigned an atlas source id."
-			);
-		}
-		TileSet toAdd = ResourceLoader.Load<TileSet>
-		(
-			basePath + codesToTileSets[tileSetRef] + fileExtension,
-			null,
-			ResourceLoader.CacheMode.Ignore
-		);
-		masterTileSet.AddSource(toAdd.GetSource(0), atlasSources[tileSetRef]);
+			masterTileSet.AddSource(toAdd.GetSource(0), atlasSources[tileSetRef]);
 	}
 
 

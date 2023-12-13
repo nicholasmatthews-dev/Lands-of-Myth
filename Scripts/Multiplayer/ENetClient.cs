@@ -8,11 +8,14 @@ using Godot;
 
 namespace LOM.Multiplayer;
 
-public class ENetClient {
-    private readonly ENetConnection connection = new();
+public partial class ENetClient : RefCounted {
+    private bool _Disposed = false;
+    private ENetConnection connection = new();
     private Thread connectionThread;
     private ConcurrentDictionary<int, HashSet<WeakReference<ENetPacketListener>>> packetListeners = new();
     ENetPacketPeer peerSelf;
+    private int timeOutMillis = 250;
+    private bool keepAlive = true;
     public ENetClient(string address, int port){
         connection.CreateHost(maxPeers : 32, maxChannels : ENetCommon.channels);
         peerSelf = connection.ConnectToHost(address, port, ENetCommon.channels);
@@ -24,19 +27,21 @@ public class ENetClient {
     }
 
     private void Process(){
-        int cycles = 0;
-        while(cycles < 100){
-            //Debug.Print("ENetClient: Peerstate is: " + peerSelf.GetState().ToString());
-            Godot.Collections.Array results = connection.Service(1000);
-            HandleResults(results);
-            cycles++;
+        while(keepAlive){
+            try{
+                Godot.Collections.Array results = connection.Service(timeOutMillis);
+                HandleResults(results);
+            }
+            catch (Exception e){
+                Debug.Print("ENetClient: Error in process: " + e.Message);
+                break;
+            }
         }
+        Debug.Print("ENetClient: Thread process exiting.");
     }
 
     private void HandleResults(Godot.Collections.Array results){
-        Debug.Print("ENetClient: Handling results: " + results);
         ENetConnection.EventType eventType = results[0].As<ENetConnection.EventType>();
-        //Debug.Print("ENetClient: Event type is " + eventType.ToString("D"));
         ENetPacketPeer peer = results[1].As<ENetPacketPeer>();
         int channel = results[3].As<int>();
         if (eventType == ENetConnection.EventType.Receive){
@@ -48,9 +53,7 @@ public class ENetClient {
 
     private void BroadCastToListeners(int channel, ENetPacketPeer peer){
         if (!packetListeners.ContainsKey(channel)){
-            throw new ArgumentException(
-                "ENetClient: Channel " + channel + " does not correspond to a valid set of listeners."
-            );
+            return;
         }
         byte[] packet = peer.GetPacket();
         List<WeakReference<ENetPacketListener>> deadReferences = new();
@@ -65,5 +68,21 @@ public class ENetClient {
         foreach(WeakReference<ENetPacketListener> reference in deadReferences){
             packetListeners[channel].Remove(reference);
         }
+    }
+
+    protected override void Dispose(bool disposing){
+        if (_Disposed){
+            return;
+        }
+        if (disposing){
+            Debug.Print("ENetClient: Disposing of this ENetClient.");
+            keepAlive = false;
+            connectionThread.Join();
+            connection.Destroy();
+            connection = null;
+            _Disposed = true;
+            base.Dispose(disposing);
+        }
+        
     }
 }

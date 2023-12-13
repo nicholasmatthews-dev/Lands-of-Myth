@@ -44,6 +44,9 @@ public class Tile{
     /// </summary>
     /// <param name="tileSetManager">The TileSetManager to be used for retrieving the data.</param>
     public void PopulateTileData(TileSetManager tileSetManager){
+        if (atlasX < 0 || atlasY < 0){
+            return;
+        }
         tileData = tileSetManager.GetTileData(this);
         isSolid = tileData.GetCustomData("Solid").AsBool();
     }

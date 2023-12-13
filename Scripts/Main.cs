@@ -55,7 +55,7 @@ public partial class Main : Node2D
 
 	public void CreateClientServer(){
 		server = new(65535);
-		Thread.Sleep(5000);
+		//Thread.Sleep(5000);
 		client = new("192.168.1.3", 65535);
 	}
 }

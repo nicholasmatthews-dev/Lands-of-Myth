@@ -3,6 +3,8 @@ using LOM.Levels;
 using LOM.Spaces;
 using Godot;
 using System;
+using LOM.Multiplayer;
+using System.Threading;
 
 public partial class Main : Node2D
 {
@@ -12,6 +14,8 @@ public partial class Main : Node2D
 	private LevelManagerNode levelManager;
 	public static GameModel gameModel = new();
 	public static World world = new World("New World");
+	ENetServer server;
+	ENetClient client;
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -30,6 +34,9 @@ public partial class Main : Node2D
             Name = "LevelManager"
         };
 
+		Thread connectionThread = new(CreateClientServer);
+		connectionThread.Start();
+
         camera.Target = character;
 		movement.Target = character;
 		movement.ActiveLevel = GameModel.levelManager;
@@ -44,5 +51,11 @@ public partial class Main : Node2D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+	public void CreateClientServer(){
+		server = new(65535);
+		Thread.Sleep(5000);
+		client = new("192.168.1.3", 65535);
 	}
 }

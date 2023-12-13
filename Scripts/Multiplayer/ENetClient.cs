@@ -70,6 +70,20 @@ public partial class ENetClient : RefCounted {
         }
     }
 
+    public void AddPacketListener(int channel, ENetPacketListener listener){
+        WeakReference<ENetPacketListener> reference = new(listener);
+        if (!packetListeners.ContainsKey(channel)){
+            HashSet<WeakReference<ENetPacketListener>> listenerSet = new()
+            {
+                reference
+            };
+            packetListeners.TryAdd(channel, listenerSet);
+        }
+        else{
+            packetListeners[channel].Add(reference);
+        }
+    }
+
     protected override void Dispose(bool disposing){
         if (_Disposed){
             return;

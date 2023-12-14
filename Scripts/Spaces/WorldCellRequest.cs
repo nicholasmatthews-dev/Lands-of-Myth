@@ -72,4 +72,9 @@ public class WorldCellRequest {
             return request;
         }
     }
+
+    public override string ToString()
+    {
+        return "(WorldCellRequest: Name = " + spaceName + "; Coords = " + coords + "; Status = " + status + ")";
+    }
 }

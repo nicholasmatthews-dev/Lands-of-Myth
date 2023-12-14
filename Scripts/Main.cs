@@ -5,6 +5,7 @@ using Godot;
 using System;
 using LOM.Multiplayer;
 using System.Threading;
+using System.Diagnostics;
 
 public partial class Main : Node2D
 {
@@ -38,7 +39,12 @@ public partial class Main : Node2D
 		//Thread connectionThread = new(CreateClientServer);
 		//connectionThread.Start();
 		CreateClientServer();
-		worldSpaceClient = new(client);
+		//worldSpaceClient = new(client);
+		WorldCellRequest worldCellRequest = new("Overwold", new Vector2I(0,0));
+		Debug.Print("Main: World cell request created: " + worldCellRequest);
+		byte[] serializedRequest = worldCellRequest.Serialize();
+		WorldCellRequest deserializedRequest = WorldCellRequest.Deserialize(serializedRequest);
+		Debug.Print("Main: World cell request after deserialization: " + deserializedRequest);
 
         camera.Target = character;
 		movement.Target = character;

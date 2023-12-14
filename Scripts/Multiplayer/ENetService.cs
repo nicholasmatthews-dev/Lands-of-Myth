@@ -38,8 +38,9 @@ public abstract partial class ENetService : RefCounted {
         Debug.Print(GetType() + ": Thread process exiting.");
     }
 
-    private void BroadCastToListeners(int channel, ENetPacketPeer peer){
+    protected void BroadCastToListeners(int channel, ENetPacketPeer peer){
         if (!packetListeners.ContainsKey(channel)){
+            Debug.Print(GetType() + ": No listener on channel " + channel);
             return;
         }
         byte[] packet = peer.GetPacket();

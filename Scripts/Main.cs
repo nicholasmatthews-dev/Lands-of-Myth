@@ -14,6 +14,7 @@ public partial class Main : Node2D
 	private LevelManagerNode levelManager;
 	public static GameModel gameModel = new();
 	public static World world = new World("New World");
+	public WorldSpaceClient worldSpaceClient;
 	ENetServer server;
 	ENetClient client;
 	// Called when the node enters the scene tree for the first time.
@@ -34,8 +35,10 @@ public partial class Main : Node2D
             Name = "LevelManager"
         };
 
-		Thread connectionThread = new(CreateClientServer);
-		connectionThread.Start();
+		//Thread connectionThread = new(CreateClientServer);
+		//connectionThread.Start();
+		CreateClientServer();
+		worldSpaceClient = new(client);
 
         camera.Target = character;
 		movement.Target = character;
@@ -55,7 +58,6 @@ public partial class Main : Node2D
 
 	public void CreateClientServer(){
 		server = new(65535);
-		//Thread.Sleep(5000);
 		client = new("192.168.1.3", 65535);
 	}
 }

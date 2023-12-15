@@ -12,6 +12,7 @@ public partial class ENetClient : ENetService {
     public ENetClient(string address, int port) : base(){
         connection.CreateHost(maxPeers : 32, maxChannels : ENetCommon.channels);
         connection.ConnectToHost(address, port, ENetCommon.channels);
+        Start();
     }
 
     protected override void HandleResults(Godot.Collections.Array results){

@@ -7,7 +7,7 @@ using LOM.Levels;
 
 namespace LOM.Spaces;
 
-public class WorldSpace : Space {
+public partial class WorldSpace : Space {
     private int id = 0;
     private string spaceName = "Overworld";
     private string basePath;

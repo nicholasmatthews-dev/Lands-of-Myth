@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LOM.Spaces;
 
-public abstract class Space{
+public abstract partial class Space : RefCounted{
     protected const FileAccess.CompressionMode compressionMode = FileAccess.CompressionMode.GZip;
 
     /// <summary>

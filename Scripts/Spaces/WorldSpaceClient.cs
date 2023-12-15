@@ -9,7 +9,8 @@ using LOM.Multiplayer;
 
 namespace LOM.Spaces;
 
-public class WorldSpaceClient : Space, ENetPacketListener {
+public partial class WorldSpaceClient : Space, ENetPacketListener {
+    private bool _Disposed = false;
     private string spaceName = "Overworld";
     private ENetClient netClient;
     private ConcurrentDictionary<Vector2I, (EventWaitHandle, WorldCellRequest)> requestHandles = new();
@@ -59,5 +60,16 @@ public class WorldSpaceClient : Space, ENetPacketListener {
     public override void StoreBytesToCell(byte[] cellToStore, Vector2I cellCoords)
     {
         return;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (_Disposed){
+            return;
+        }
+        if (disposing){
+            netClient = null;
+        }
+        base.Dispose(disposing);
     }
 }

@@ -15,7 +15,7 @@ public abstract partial class ENetService : RefCounted {
     protected int timeOutMillis = 250;
     protected bool keepAlive = true;
 
-    public ENetService(){
+    protected void Start(){
         connection.Compress(ENetCommon.compressionMode);
         connectionThread = new(Process)
         {

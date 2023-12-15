@@ -9,6 +9,7 @@ public partial class ENetServer : ENetService{
     public ENetServer(int port) : base(){
         Error error = connection.CreateHostBound("*", port, maxPeers : 32, maxChannels : ENetCommon.channels);
         Debug.Print("ENetServer: Error from creating server is " + error);
+        Start();
     }
 
     protected override void HandleResults(Godot.Collections.Array results){

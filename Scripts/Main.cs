@@ -16,6 +16,7 @@ public partial class Main : Node2D
 	public static GameModel gameModel = new();
 	public static World world = new World("New World");
 	public WorldSpaceClient worldSpaceClient;
+	public WorldSpaceServer worldSpaceServer;
 	ENetServer server;
 	ENetClient client;
 	// Called when the node enters the scene tree for the first time.
@@ -39,12 +40,9 @@ public partial class Main : Node2D
 		//Thread connectionThread = new(CreateClientServer);
 		//connectionThread.Start();
 		CreateClientServer();
-		//worldSpaceClient = new(client);
-		WorldCellRequest worldCellRequest = new("Overwold", new Vector2I(0,0));
-		Debug.Print("Main: World cell request created: " + worldCellRequest);
-		byte[] serializedRequest = worldCellRequest.Serialize();
-		WorldCellRequest deserializedRequest = WorldCellRequest.Deserialize(serializedRequest);
-		Debug.Print("Main: World cell request after deserialization: " + deserializedRequest);
+		worldSpaceClient = new(client);
+		worldSpaceServer = new(server);
+		worldSpaceClient.GetLevelCell(new Vector2I(0,0));
 
         camera.Target = character;
 		movement.Target = character;

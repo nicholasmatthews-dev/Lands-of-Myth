@@ -21,16 +21,16 @@ public class WorldSpaceClient : Space, ENetPacketListener {
 
     public override Task<LevelCell> GetLevelCell(Vector2I cellCoords)
     {
-        return new Task<LevelCell>(() => {
+        return Task<LevelCell>.Run(() => {
             WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
             requestHandles.TryAdd(cellCoords, (waitHandle, request));
-            Debug.Print("WorldSpaceClient: Sending request to server.");
+            Debug.Print("WorldSpaceClient: Sending request to server: " + request);
             netClient.SendMessage(communicationChannel, request.Serialize());
             waitHandle.WaitOne();
             Debug.Print("WorldSpaceClient: Returning from wait with results?");
-            (EventWaitHandle, WorldCellRequest) updatedEntry;
-            requestHandles.TryGetValue(cellCoords, out updatedEntry);
+            requestHandles.TryGetValue(cellCoords, out (EventWaitHandle, WorldCellRequest) updatedEntry);
+            Debug.Print("WorldSpaceClient: New request is: " + updatedEntry.Item2);
             LevelCell output = LevelCell.Deserialize(updatedEntry.Item2.payload);
             requestHandles.TryRemove(cellCoords, out updatedEntry);
             return output;

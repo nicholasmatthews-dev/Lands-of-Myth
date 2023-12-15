@@ -39,17 +39,19 @@ public abstract partial class ENetService : RefCounted {
     }
 
     protected void BroadCastToListeners(int channel, ENetPacketPeer peer){
+        byte[] packet = peer.GetPacket();
         if (!packetListeners.ContainsKey(channel)){
             Debug.Print(GetType() + ": No listener on channel " + channel);
             return;
         }
-        byte[] packet = peer.GetPacket();
         List<WeakReference<ENetPacketListener>> deadReferences = new();
         foreach (WeakReference<ENetPacketListener> reference in packetListeners[channel]){
             if (reference.TryGetTarget(out ENetPacketListener listener)){
+                Debug.Print(GetType() + ": Sending packet of length " + packet.Length + " to listener.");
                 listener.ReceivePacket(packet, peer);
             }
             else{
+                Debug.Print(GetType() + ": Found dead listener.");
                 deadReferences.Add(reference);
             }
         }
@@ -59,6 +61,7 @@ public abstract partial class ENetService : RefCounted {
     }
 
     public void AddPacketListener(int channel, ENetPacketListener listener){
+        Debug.Print(GetType() + ": Attempting to add listener on channel " + channel);
         WeakReference<ENetPacketListener> reference = new(listener);
         if (!packetListeners.ContainsKey(channel)){
             HashSet<WeakReference<ENetPacketListener>> listenerSet = new()

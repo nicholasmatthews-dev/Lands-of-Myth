@@ -49,7 +49,7 @@ public class WorldCellRequest {
 
     public static WorldCellRequest Deserialize(byte[] input){
         if (input[0] != MagicNumber){
-            throw new ArgumentException("WorldCellRequest: Magic number mismatch, invalid request.");
+            throw new ArgumentException("WorldCellRequest: Magic number mismatch " + input[0] + ", invalid request.");
         }
         int byteHead = 1;
         RequestStatus status = (RequestStatus)SerializationHelper.ReadBytes(input, 1, ref byteHead)[0];
@@ -75,6 +75,14 @@ public class WorldCellRequest {
 
     public override string ToString()
     {
-        return "(WorldCellRequest: Name = " + spaceName + "; Coords = " + coords + "; Status = " + status + ")";
+        if (payload is null){
+            return "(WorldCellRequest: Name = " + spaceName + "; Coords = " + coords + "; Status = " + status + ")";
+        }
+        else {
+            return "(WorldCellRequest: Name = " + spaceName 
+            + "; Coords = " + coords 
+            + "; Status = " + status 
+            + "; PayloadLength = " + payload.Length + ")";
+        }
     }
 }

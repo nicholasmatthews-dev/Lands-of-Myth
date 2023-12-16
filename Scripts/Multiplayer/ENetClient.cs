@@ -8,7 +8,14 @@ namespace LOM.Multiplayer;
 
 public partial class ENetClient : ENetService {
     private static bool Debugging = false;
+    /// <summary>
+    /// The peer which represents the server that this client is connected to.
+    /// </summary>
     ENetPacketPeer serverPeer;
+    /// <summary>
+    /// A wait handle that signals whether or not a connection to the server has been
+    /// established.
+    /// </summary>
     EventWaitHandle connectionWait = new(false, EventResetMode.ManualReset);
     public ENetClient(string address, int port) : base(){
         connection.CreateHost(maxPeers : 32, maxChannels : ENetCommon.channels);
@@ -30,6 +37,13 @@ public partial class ENetClient : ENetService {
         }
     }
 
+    /// <summary>
+    /// Sends a message to the connected server on the specified channel. This method will run
+    /// asynchronously and wait until a connection has been established with the server before
+    /// the message is sent out.
+    /// </summary>
+    /// <param name="channel">The channel to send the message on.</param>
+    /// <param name="message">A byte array representing the message to be sent.</param>
     public void SendMessage(int channel, byte[] message){
         Task.Run(() => {
             connectionWait.WaitOne();

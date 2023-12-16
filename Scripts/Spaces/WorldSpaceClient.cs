@@ -12,9 +12,25 @@ namespace LOM.Spaces;
 public partial class WorldSpaceClient : Space, ENetPacketListener {
     private static bool Debugging = false;
     private bool _Disposed = false;
+    /// <summary>
+    /// The name of the space that this WorldSpaceClient represents.
+    /// </summary>
     private string spaceName = "Overworld";
+    /// <summary>
+    /// The client that this object will use for communication.
+    /// </summary>
     private ENetClient netClient;
+    /// <summary>
+    /// A dictionary encapsulating all the active requests for cells that this object has
+    /// sent out. Each entry is indexed by its cell coordinates and contains a wait handle
+    /// which can be waited on until the request is fulfilled, and a worldcellrequest which
+    /// holds information about the request and will contain the payload when the request is
+    /// fulfilled.
+    /// </summary>
     private ConcurrentDictionary<Vector2I, (EventWaitHandle, WorldCellRequest)> requestHandles = new();
+    /// <summary>
+    /// The ENetChannel that this object communicates with the server on.
+    /// </summary>
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
     public WorldSpaceClient(ENetClient eNetClient) : base(){
         netClient = eNetClient;
@@ -23,6 +39,9 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
 
     public override Task<LevelCell> GetLevelCell(Vector2I cellCoords)
     {
+        // Creates a task which will send a request for the LevelCell over the network
+        // will suspend itself and await a response from the server, then return with 
+        // the deserialized LevelCell.
         return Task<LevelCell>.Run(() => {
             WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
@@ -48,19 +67,21 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
     public void ReceivePacket(byte[] packet, ENetPacketPeer peer)
     {
         if (Debugging) Debug.Print("WorldSpaceClient: Packet received.");
+        WorldCellRequest request;
         try {
-            WorldCellRequest request = WorldCellRequest.Deserialize(packet);
-            if (Debugging) Debug.Print("WorldSpaceClient: Received request: " + request);
-            Vector2I coords = request.coords;
-            (EventWaitHandle, WorldCellRequest) entry;
-            if (requestHandles.TryGetValue(coords, out entry)){
-                if (requestHandles.TryUpdate(coords, (entry.Item1, request), entry)){
-                    entry.Item1.Set();
-                }
-            }
+            request = WorldCellRequest.Deserialize(packet);
         }
         catch (Exception e){
             Debug.Print("WorldSpaceClient: Error in deserializing packet: " + e.Message);
+            return;
+        }
+        if (Debugging) Debug.Print("WorldSpaceClient: Received request: " + request);
+        Vector2I coords = request.coords;
+        (EventWaitHandle, WorldCellRequest) entry;
+        if (requestHandles.TryGetValue(coords, out entry)){
+            if (requestHandles.TryUpdate(coords, (entry.Item1, request), entry)){
+                entry.Item1.Set();
+            }
         }
     }
 

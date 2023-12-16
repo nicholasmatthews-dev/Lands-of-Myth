@@ -8,6 +8,7 @@ using Godot;
 namespace LOM.Multiplayer;
 
 public abstract partial class ENetService : RefCounted {
+    private static bool Debugging = false;
     protected bool _Disposed = false;
     protected ENetConnection connection = new();
     protected Thread connectionThread;
@@ -35,23 +36,23 @@ public abstract partial class ENetService : RefCounted {
                 break;
             }
         }
-        Debug.Print(GetType() + ": Thread process exiting.");
+        if (Debugging) Debug.Print(GetType() + ": Thread process exiting.");
     }
 
     protected void BroadCastToListeners(int channel, ENetPacketPeer peer){
         byte[] packet = peer.GetPacket();
         if (!packetListeners.ContainsKey(channel)){
-            Debug.Print(GetType() + ": No listener on channel " + channel);
+            if (Debugging) Debug.Print(GetType() + ": No listener on channel " + channel);
             return;
         }
         List<WeakReference<ENetPacketListener>> deadReferences = new();
         foreach (WeakReference<ENetPacketListener> reference in packetListeners[channel]){
             if (reference.TryGetTarget(out ENetPacketListener listener)){
-                Debug.Print(GetType() + ": Sending packet of length " + packet.Length + " to listener.");
+                if (Debugging) Debug.Print(GetType() + ": Sending packet of length " + packet.Length + " to listener.");
                 listener.ReceivePacket(packet, peer);
             }
             else{
-                Debug.Print(GetType() + ": Found dead listener.");
+                if (Debugging) Debug.Print(GetType() + ": Found dead listener.");
                 deadReferences.Add(reference);
             }
         }
@@ -61,7 +62,7 @@ public abstract partial class ENetService : RefCounted {
     }
 
     public void AddPacketListener(int channel, ENetPacketListener listener){
-        Debug.Print(GetType() + ": Attempting to add listener on channel " + channel);
+        if (Debugging) Debug.Print(GetType() + ": Attempting to add listener on channel " + channel);
         WeakReference<ENetPacketListener> reference = new(listener);
         if (!packetListeners.ContainsKey(channel)){
             HashSet<WeakReference<ENetPacketListener>> listenerSet = new()
@@ -82,14 +83,14 @@ public abstract partial class ENetService : RefCounted {
             return;
         }
         if (disposing){
-            Debug.Print(GetType() + ": Disposing of this instance.");
+            if (Debugging) Debug.Print(GetType() + ": Disposing of this instance.");
             keepAlive = false;
             connectionThread.Join();
             try {
                 connection.Destroy();
             }
             catch (Exception e){
-                Debug.Print(GetType() + ": Couldn't destroy connection error \"" + e.Message + "\"");
+                if (Debugging) Debug.Print(GetType() + ": Couldn't destroy connection error \"" + e.Message + "\"");
             }
             connection = null;
             _Disposed = true;

@@ -7,6 +7,7 @@ using Godot;
 namespace LOM.Multiplayer;
 
 public partial class ENetClient : ENetService {
+    private static bool Debugging = false;
     ENetPacketPeer serverPeer;
     EventWaitHandle connectionWait = new(false, EventResetMode.ManualReset);
     public ENetClient(string address, int port) : base(){
@@ -26,15 +27,15 @@ public partial class ENetClient : ENetService {
         }
         if (eventType == ENetConnection.EventType.Receive){
             BroadCastToListeners(channel, peer);
-            //byte[] packet = peer.GetPacket();
-            //Debug.Print("ENetClient: Message received \"" + Encoding.ASCII.GetString(packet) + "\"");
         }
     }
 
     public void SendMessage(int channel, byte[] message){
         Task.Run(() => {
             connectionWait.WaitOne();
-            Debug.Print("ENetClient: Sending message on channel " + channel + " to " + serverPeer.GetRemoteAddress());
+            if (Debugging){
+                Debug.Print("ENetClient: Sending message on channel " + channel + " to " + serverPeer.GetRemoteAddress());
+            }
             serverPeer.Send(channel, message, (int)ENetPacketPeer.FlagUnsequenced);
         });
     }

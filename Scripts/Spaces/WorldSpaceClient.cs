@@ -10,6 +10,7 @@ using LOM.Multiplayer;
 namespace LOM.Spaces;
 
 public partial class WorldSpaceClient : Space, ENetPacketListener {
+    private static bool Debugging = false;
     private bool _Disposed = false;
     private string spaceName = "Overworld";
     private ENetClient netClient;
@@ -26,12 +27,18 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
             WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
             requestHandles.TryAdd(cellCoords, (waitHandle, request));
-            Debug.Print("WorldSpaceClient: Sending request to server: " + request);
+            if (Debugging){
+                Debug.Print("WorldSpaceClient: Sending request to server: " + request);
+            }
             netClient.SendMessage(communicationChannel, request.Serialize());
             waitHandle.WaitOne();
-            Debug.Print("WorldSpaceClient: Returning from wait with results?");
+            if (Debugging){
+                Debug.Print("WorldSpaceClient: Returning from wait with results?");
+            }
             requestHandles.TryGetValue(cellCoords, out (EventWaitHandle, WorldCellRequest) updatedEntry);
-            Debug.Print("WorldSpaceClient: New request is: " + updatedEntry.Item2);
+            if (Debugging){
+                Debug.Print("WorldSpaceClient: New request is: " + updatedEntry.Item2);
+            }
             LevelCell output = LevelCell.Deserialize(updatedEntry.Item2.payload);
             requestHandles.TryRemove(cellCoords, out updatedEntry);
             return output;
@@ -40,10 +47,10 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
 
     public void ReceivePacket(byte[] packet, ENetPacketPeer peer)
     {
-        Debug.Print("WorldSpaceClient: Packet received.");
+        if (Debugging) Debug.Print("WorldSpaceClient: Packet received.");
         try {
             WorldCellRequest request = WorldCellRequest.Deserialize(packet);
-            Debug.Print("WorldSpaceClient: Received request: " + request);
+            if (Debugging) Debug.Print("WorldSpaceClient: Received request: " + request);
             Vector2I coords = request.coords;
             (EventWaitHandle, WorldCellRequest) entry;
             if (requestHandles.TryGetValue(coords, out entry)){

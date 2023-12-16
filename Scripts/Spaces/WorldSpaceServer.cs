@@ -9,6 +9,7 @@ namespace LOM.Spaces;
 
 public class WorldSpaceServer : ENetPacketListener
 {
+    private static bool Debugging = false;
     private ENetServer eNetServer;
     private WorldSpace activeSpace = new();
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
@@ -20,18 +21,18 @@ public class WorldSpaceServer : ENetPacketListener
 
     public void ReceivePacket(byte[] packet, ENetPacketPeer peer)
     {
-        Debug.Print("WorldSpaceServer: Packet received.");
+        if (Debugging) Debug.Print("WorldSpaceServer: Packet received.");
         try {
             WorldCellRequest request = WorldCellRequest.Deserialize(packet);
-            Debug.Print("WorldSpaceServer: Request received: " + request);
+            if (Debugging) Debug.Print("WorldSpaceServer: Request received: " + request);
             Task.Run(async () => {
                 Task<LevelCell> levelCell = activeSpace.GetLevelCell(request.coords);
                 await levelCell;
                 request.payload = levelCell.Result.Serialize();
                 request.status = WorldCellRequest.RequestStatus.Fulfilled;
                 byte[] packet = request.Serialize();
-                Debug.Print("WorldSpaceServer: Responding to request: " + request);
-                Debug.Print("WorldSpaceServer: Packet size is " + packet.Length);
+                if (Debugging) Debug.Print("WorldSpaceServer: Responding to request: " + request);
+                if (Debugging) Debug.Print("WorldSpaceServer: Packet size is " + packet.Length);
                 peer.Send(communicationChannel, packet, (int)ENetPacketPeer.FlagReliable);
             });
         }

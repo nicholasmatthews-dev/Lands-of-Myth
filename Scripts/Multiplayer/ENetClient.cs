@@ -8,7 +8,7 @@ namespace LOM.Multiplayer;
 
 public partial class ENetClient : ENetService {
     ENetPacketPeer serverPeer;
-    EventWaitHandle connectionWait = new(false, EventResetMode.AutoReset);
+    EventWaitHandle connectionWait = new(false, EventResetMode.ManualReset);
     public ENetClient(string address, int port) : base(){
         connection.CreateHost(maxPeers : 32, maxChannels : ENetCommon.channels);
         connection.ConnectToHost(address, port, ENetCommon.channels);

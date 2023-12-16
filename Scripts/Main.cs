@@ -42,7 +42,7 @@ public partial class Main : Node2D
 		CreateClientServer();
 		worldSpaceClient = new(client);
 		worldSpaceServer = new(server);
-		worldSpaceClient.GetLevelCell(new Vector2I(0,0));
+		GameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));
 
         camera.Target = character;
 		movement.Target = character;

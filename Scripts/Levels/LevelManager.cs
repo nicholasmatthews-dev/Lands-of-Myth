@@ -76,8 +76,8 @@ public partial class LevelManager : PositionUpdateListener
 	private EventWaitHandle positionUpdateHandle = new(false, EventResetMode.AutoReset);
 
 	public LevelManager(){
-		activeSpace = new WorldSpace();
-		ChangeLoadedCells(lastPosition);
+		//activeSpace = new WorldSpace();
+		//ChangeLoadedCells(lastPosition);
 		Main.movement.AddPositionUpdateListener(this);
         processThread = new Thread(Process)
         {
@@ -106,13 +106,19 @@ public partial class LevelManager : PositionUpdateListener
 	/// Handles the last position update to occur, will change the loaded cells to center on the
 	/// new position if it differs from the previous center.
 	/// </summary>
-	public void HandlePositionUpdate(){
+	private void HandlePositionUpdate(){
 		lock(newPositionLock){
 			if (newPosition != lastPosition){
 				lastPosition = newPosition;
 				ChangeLoadedCells(lastPosition);
 			}
 		}
+	}
+
+	public void ChangeActiveSpace(Space newSpace, Vector2I newPosition){
+		activeSpace = newSpace;
+		lastPosition = newPosition;
+		ChangeLoadedCells(lastPosition);
 	}
 
 	public void OnPositionUpdate(Vector2I coords){
@@ -202,7 +208,9 @@ public partial class LevelManager : PositionUpdateListener
             {
                 (cellCoords[1].X, cellCoords[1].Y)
             };
-			valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
+			if (activeCells.ContainsKey(cellCoords[0])){
+				valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
+			}
 		}
 		return valid;
 	}

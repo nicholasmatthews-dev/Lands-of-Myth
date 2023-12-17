@@ -9,6 +9,9 @@ using LOM.Multiplayer;
 
 namespace LOM.Spaces;
 
+/// <summary>
+/// Represents a <c>WorldSpace</c> via a connection to a <see cref="WorldSpaceServer"/>.
+/// </summary>
 public partial class WorldSpaceClient : Space, ENetPacketListener {
     private static bool Debugging = false;
     private bool _Disposed = false;
@@ -39,10 +42,18 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
 
     public override Task<LevelCell> GetLevelCell(Vector2I cellCoords)
     {
-        // Creates a task which will send a request for the LevelCell over the network
-        // will suspend itself and await a response from the server, then return with 
-        // the deserialized LevelCell.
-        return Task<LevelCell>.Run(() => {
+        return CreateRetrievalTask(cellCoords);
+    }
+
+    /// <summary>
+    /// Creates a task to retrieve a <c>LevelCell</c> at the given coordinates. This will
+    /// send a <c>WorldCellRequest</c> to the server and then await a response. The 
+    /// <c>LevelCell</c> contained in the response will then be returned.
+    /// </summary>
+    /// <param name="cellCoords">The coordinates of the <c>LevelCell</c> to retrieve.</param>
+    /// <returns>A task which will retrieve the <c>LevelCell</c> at the given coordinates.</returns>
+    private Task<LevelCell> CreateRetrievalTask(Vector2I cellCoords){
+        return Task.Run(() => {
             WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
             requestHandles.TryAdd(cellCoords, (waitHandle, request));

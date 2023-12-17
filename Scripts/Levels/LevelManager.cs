@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace LOM.Levels;
 
+/// <summary>
+/// Represents a manager which is responsible for retrieving the appropriate
+/// <c>LevelCells</c> from its active <c>Space</c>.
+/// </summary>
 public partial class LevelManager : PositionUpdateListener
 {
 	/// <summary>
@@ -115,6 +119,11 @@ public partial class LevelManager : PositionUpdateListener
 		}
 	}
 
+	/// <summary>
+	/// Changes the currently active <c>Space</c> that this <c>LevelManager</c> is handling.
+	/// </summary>
+	/// <param name="newSpace">The <c>Space</c> to switch to.</param>
+	/// <param name="newPosition">The center (in cell coordinates) for this <c>LevelManager</c>.</param>
 	public void ChangeActiveSpace(Space newSpace, Vector2I newPosition){
 		activeSpace = newSpace;
 		lastPosition = newPosition;

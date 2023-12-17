@@ -4,6 +4,9 @@ using System.Text;
 
 namespace LOM.Multiplayer;
 
+/// <summary>
+/// Represents an ENet server instance, which handles connections with <see cref="ENetClient"/> instances. 
+/// </summary>
 public partial class ENetServer : ENetService{
     private static bool Debugging = false;
 

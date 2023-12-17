@@ -6,6 +6,9 @@ using Godot;
 
 namespace LOM.Multiplayer;
 
+/// <summary>
+/// Represents an ENet client connection meant to connect to an <see cref="ENetServer"/> 
+/// </summary>
 public partial class ENetClient : ENetService {
     private static bool Debugging = false;
     /// <summary>

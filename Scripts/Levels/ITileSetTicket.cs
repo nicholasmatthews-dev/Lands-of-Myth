@@ -2,7 +2,7 @@ using Godot;
 using System;
 
 namespace LOM.Levels;
-public interface TileSetTicket {
+public interface ITileSetTicket {
     public int GetAtlasId();
     public void Release();
 }

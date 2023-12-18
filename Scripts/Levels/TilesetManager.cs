@@ -7,7 +7,7 @@ namespace LOM.Levels;
 
 public class TileSetManager
 {
-	class Ticket : TileSetTicket {
+	class Ticket : ITileSetTicket {
 		private TileSetManager tileSetManager;
 		private int tileSetRef;
 
@@ -127,7 +127,7 @@ public class TileSetManager
 		}
 	}
 
-	public TileSetTicket GetTileSetTicket(int tileSetRef){
+	public ITileSetTicket GetTileSetTicket(int tileSetRef){
 		return new Ticket(this, tileSetRef);
 	}
 

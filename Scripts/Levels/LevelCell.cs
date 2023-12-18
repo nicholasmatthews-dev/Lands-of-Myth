@@ -26,7 +26,7 @@ public partial class LevelCell
 	/// A dictionary mapping between tileSetRefs and the corresponding <c>TileSetTicket</c>s which
 	/// this <c>LevelCell</c> has checked out.
 	/// </summary>
-	private Dictionary<int, TileSetTicket> tickets = new Dictionary<int, TileSetTicket>();
+	private Dictionary<int, ITileSetTicket> tickets = new Dictionary<int, ITileSetTicket>();
 	/// <summary>
 	/// A dictionary mapping between the atlas source id in the master <c>TileSet</c> and the
 	/// associated tileSetRef.
@@ -162,7 +162,7 @@ public partial class LevelCell
 	/// </summary>
 	/// <param name="tileSetRef">The reference code for the desired tileset.</param>
 	private void AddTicket(int tileSetRef){
-		TileSetTicket tileSetTicket = tileSetManager.GetTileSetTicket(tileSetRef);
+		ITileSetTicket tileSetTicket = tileSetManager.GetTileSetTicket(tileSetRef);
 		tickets.Add(tileSetRef, tileSetTicket);
 		atlasCodesToRef.Add(tileSetTicket.GetAtlasId(), tileSetRef);
 	}

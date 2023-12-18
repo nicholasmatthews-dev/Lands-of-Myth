@@ -35,7 +35,9 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
     /// The ENetChannel that this object communicates with the server on.
     /// </summary>
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
-    public WorldSpaceClient(ENetClient eNetClient) : base(){
+    private TileSetManager tileSetManager;
+    public WorldSpaceClient(ENetClient eNetClient, TileSetManager tileSetManager) : base(){
+        this.tileSetManager = tileSetManager;
         netClient = eNetClient;
         netClient.AddPacketListener(communicationChannel, this);
     }
@@ -69,7 +71,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
             if (Debugging){
                 Debug.Print("WorldSpaceClient: New request is: " + updatedEntry.Item2);
             }
-            LevelCell output = LevelCell.Deserialize(updatedEntry.Item2.payload);
+            LevelCell output = LevelCell.Deserialize(updatedEntry.Item2.payload, tileSetManager);
             requestHandles.TryRemove(cellCoords, out updatedEntry);
             return output;
         });

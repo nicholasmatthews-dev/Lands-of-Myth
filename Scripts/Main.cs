@@ -13,7 +13,7 @@ public partial class Main : Node2D
 	public static Movement movement;
 	private Node2D character;
 	private LevelManagerNode levelManager;
-	public static GameModel gameModel = new();
+	public GameModel gameModel = new();
 	public static World world = new World("New World");
 	public WorldSpaceClient worldSpaceClient;
 	public WorldSpaceServer worldSpaceServer;
@@ -32,23 +32,22 @@ public partial class Main : Node2D
 		character = (Node2D)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/00dummy.tscn")
 		.Instantiate();
-        levelManager = new LevelManagerNode(GameModel.levelManager)
+        levelManager = new LevelManagerNode(gameModel.LevelManager, gameModel.TileSetManager)
         {
             Name = "LevelManager"
         };
 
-		//Thread connectionThread = new(CreateClientServer);
-		//connectionThread.Start();
 		CreateClientServer();
-		worldSpaceClient = new(client);
-		worldSpaceServer = new(server);
-		GameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));
+		worldSpaceClient = new(client, gameModel.TileSetManager);
+		worldSpaceServer = new(server, gameModel.TileSetManager);
+		gameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));
 
         camera.Target = character;
+		gameModel.LevelManager.RegisterPostionUpdateSource(movement);
 		movement.Target = character;
-		movement.ActiveLevel = GameModel.levelManager;
+		movement.ActiveLevel = gameModel.LevelManager;
 		
-		AddChild(GameModel.tileSetManager);
+		//AddChild(gameModel.TileSetManager);
 		AddChild(levelManager);
 		AddChild(character);
 		AddChild(movement);

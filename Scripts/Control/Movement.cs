@@ -6,7 +6,7 @@ using LOM.Levels;
 
 namespace LOM.Control;
 
-public partial class Movement : Node
+public partial class Movement : Node, IPositionUpdateSource
 {
 	/// <summary>
 	/// The target Node2D for this movement node to move.

@@ -4,10 +4,13 @@ using LOM.Spaces;
 using System;
 
 public class GameModel {
-    public static TileSetManager tileSetManager = new();
-    public static LevelManager levelManager = new();
+    private TileSetManager tileSetManager = new();
+    private LevelManager levelManager = new();
 
-    public static void ChangeActiveSpace(Space newSpace, Vector2I newCoords){
-        levelManager.ChangeActiveSpace(newSpace, newCoords);
+    public LevelManager LevelManager { get => levelManager; }
+    public TileSetManager TileSetManager { get => tileSetManager; }
+
+    public void ChangeActiveSpace(Space newSpace, Vector2I newCoords){
+        LevelManager.ChangeActiveSpace(newSpace, newCoords);
     }
 }

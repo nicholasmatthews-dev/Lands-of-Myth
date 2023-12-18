@@ -19,12 +19,15 @@ public partial class LevelCellNode : Node2D {
     /// </summary>
     private TileMap tileMap = new();
 
-    public LevelCellNode(LevelCell referenceCell) : base(){
+    private TileSetManager tileSetManager;
+
+    public LevelCellNode(LevelCell referenceCell, TileSetManager tileSetManager) : base(){
+        this.tileSetManager = tileSetManager;
         this.referenceCell = referenceCell;
     }
 
     public override void _Ready(){
-        tileMap.TileSet = GameModel.tileSetManager.GetDefaultTileSet();
+        tileMap.TileSet = tileSetManager.GetDefaultTileSet();
         tileMap.AddLayer(-1);
         tileMap.AddLayer(-1);
         AddChild(tileMap);

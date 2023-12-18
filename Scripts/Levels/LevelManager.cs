@@ -80,15 +80,16 @@ public partial class LevelManager : PositionUpdateListener
 	private EventWaitHandle positionUpdateHandle = new(false, EventResetMode.AutoReset);
 
 	public LevelManager(){
-		//activeSpace = new WorldSpace();
-		//ChangeLoadedCells(lastPosition);
-		Main.movement.AddPositionUpdateListener(this);
         processThread = new Thread(Process)
         {
             IsBackground = true,
 			Name = "LevelManagerProcess"
         };
         processThread.Start();
+	}
+
+	public void RegisterPostionUpdateSource(IPositionUpdateSource source){
+		source.AddPositionUpdateListener(this);
 	}
 
 	/// <summary>

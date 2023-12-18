@@ -59,7 +59,10 @@ public partial class LevelCell
 	/// </summary>
 	public ConcurrentQueue<((int, int, int), Tile)> tileUpdates = new();
 
-	public LevelCell(){
+	private TileSetManager tileSetManager;
+
+	public LevelCell(TileSetManager tileSetManager){
+		this.tileSetManager = tileSetManager;
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
 				Solid[i,j] = false;
@@ -144,7 +147,7 @@ public partial class LevelCell
 		}
 		if (!tileToCodes.ContainsKey(input)){
 			int code = tileToCodes.Count();
-			input.PopulateTileData(GameModel.tileSetManager);
+			input.PopulateTileData(tileSetManager);
 			tileToCodes.Add(input, code);
 			codesToTiles.Add(code, input);
 		}
@@ -159,7 +162,7 @@ public partial class LevelCell
 	/// </summary>
 	/// <param name="tileSetRef">The reference code for the desired tileset.</param>
 	private void AddTicket(int tileSetRef){
-		TileSetTicket tileSetTicket = GameModel.tileSetManager.GetTileSetTicket(tileSetRef);
+		TileSetTicket tileSetTicket = tileSetManager.GetTileSetTicket(tileSetRef);
 		tickets.Add(tileSetRef, tileSetTicket);
 		atlasCodesToRef.Add(tileSetTicket.GetAtlasId(), tileSetRef);
 	}
@@ -195,8 +198,8 @@ public partial class LevelCell
 	/// <param name="input">The bytes which represent the <c>LevelCell</c></param>
 	/// <returns>A new instance of <c>LevelCell</c> which is a copy of the object 
 	/// previously serialized.</returns>
-	public static LevelCell Deserialize(byte[] input){
-		LevelCell output = new LevelCell();
+	public static LevelCell Deserialize(byte[] input, TileSetManager tileSetManager){
+		LevelCell output = new LevelCell(tileSetManager);
 		List<byte> bytes = new List<byte>(input);
 
 		(int, List<(int, List<Tile>)>) tileSetHeader = DecodeTileSourceHeader(bytes);

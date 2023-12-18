@@ -15,8 +15,10 @@ public partial class LevelManagerNode : Node2D {
     /// represent those cells.
     /// </summary>
     private Dictionary<Vector2I, LevelCellNode> activeNodes = new();
+    private TileSetManager tileSetManager;
 
-    public LevelManagerNode(LevelManager referenceManager) : base(){
+    public LevelManagerNode(LevelManager referenceManager, TileSetManager tileSetManager) : base(){
+        this.tileSetManager = tileSetManager;
         this.referenceManager = referenceManager;
     }
 
@@ -73,7 +75,7 @@ public partial class LevelManagerNode : Node2D {
     /// <param name="coords">The coordinates of the cell to add in cell space.</param>
     /// <param name="toAdd">The LevelCell to be added.</param>
     private void AddCell(Vector2I coords, LevelCell toAdd){
-        LevelCellNode newNode = new(toAdd)
+        LevelCellNode newNode = new(toAdd, tileSetManager)
         {
             Position = new Vector2
         (

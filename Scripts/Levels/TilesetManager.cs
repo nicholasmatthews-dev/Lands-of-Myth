@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace LOM.Levels;
 
-public partial class TileSetManager : Node
+public class TileSetManager
 {
 	class Ticket : TileSetTicket {
 		private TileSetManager tileSetManager;
@@ -216,17 +216,6 @@ public partial class TileSetManager : Node
 				ResourceLoader.CacheMode.Ignore
 			);
 			masterTileSet.AddSource(toAdd.GetSource(0), atlasSources[tileSetRef]);
-	}
-
-
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-	}
-
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
 	}
 
 }

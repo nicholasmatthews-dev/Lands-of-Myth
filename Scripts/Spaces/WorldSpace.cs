@@ -11,8 +11,10 @@ public partial class WorldSpace : Space {
     private int id = 0;
     private string spaceName = "Overworld";
     private string basePath;
+    private TileSetManager tileSetManager;
 
-    public WorldSpace() : base(){
+    public WorldSpace(TileSetManager tileSetManager) : base(){
+        this.tileSetManager = tileSetManager;
         basePath = Main.world.GetSavePath() + "/" + spaceName;
         Debug.Print("WorldSpace: Attempting to create directory: \"" + basePath + "\"");
         Error error = DirAccess.MakeDirRecursiveAbsolute(basePath);
@@ -32,7 +34,7 @@ public partial class WorldSpace : Space {
             });
         }
         return Task.Run(() => {
-            return LoadCellFromDisk(file);
+            return LoadCellFromDisk(file, tileSetManager);
         });
     }
 
@@ -57,11 +59,11 @@ public partial class WorldSpace : Space {
     /// </summary>
     /// <param name="file">The file to be opened.</param>
     /// <returns>The LevelCell stored in the file.</returns>
-    private static LevelCell LoadCellFromDisk(FileAccess file){
+    private static LevelCell LoadCellFromDisk(FileAccess file, TileSetManager tileSetManager){
         int bufferLength = (int)file.Get64();
         byte[] buffer = file.GetBuffer(bufferLength);
         file.Close();
-        return LevelCell.Deserialize(buffer);
+        return LevelCell.Deserialize(buffer, tileSetManager);
     }
 
     /// <summary>
@@ -71,8 +73,8 @@ public partial class WorldSpace : Space {
     /// space.</param>
     /// <returns>A newly generated <c>LevelCell</c> at the given coordinates.</returns>
     private LevelCell GenerateNewCell(Vector2I coords){
-        int forestRefId = GameModel.tileSetManager.GetTileSetCode("Forest");
-        LevelCell newCell = new LevelCell();
+        int forestRefId = tileSetManager.GetTileSetCode("Forest");
+        LevelCell newCell = new LevelCell(tileSetManager);
         Tile fill;
         if ((coords.X + coords.Y) % 2 == 0){
             fill = new(forestRefId, 0, 0);
@@ -96,7 +98,7 @@ public partial class WorldSpace : Space {
     /// </summary>
     /// <param name="input">The <c>LevelCell</c> to be modified.</param>
     private void AddStructure(ref LevelCell input){
-		int buildingsRefId = GameModel.tileSetManager.GetTileSetCode("Elf_Buildings");
+		int buildingsRefId = tileSetManager.GetTileSetCode("Elf_Buildings");
 		TileMap houses = (TileMap)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
 		.Instantiate();

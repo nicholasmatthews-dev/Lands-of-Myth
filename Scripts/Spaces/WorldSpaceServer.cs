@@ -21,13 +21,16 @@ public class WorldSpaceServer : ENetPacketListener
     /// The currently active space that this WorldSpaceServer is using.
     /// TODO: Expand to a collection to service multiple clients in different spaces.
     /// </summary>
-    private WorldSpace activeSpace = new();
+    private WorldSpace activeSpace;
     /// <summary>
     /// The ENet channel that this object communicates over.
     /// </summary>
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
+    private TileSetManager tileSetManager;
 
-    public WorldSpaceServer(ENetServer server){
+    public WorldSpaceServer(ENetServer server, TileSetManager tileSetManager){
+        this.tileSetManager = tileSetManager;
+        activeSpace = new(tileSetManager);
         eNetServer = server;
         eNetServer.AddPacketListener(communicationChannel,this);
     }

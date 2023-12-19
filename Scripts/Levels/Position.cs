@@ -1,9 +1,12 @@
+using System.Diagnostics;
+
 namespace LOM.Levels;
 
 /// <summary>
 /// Represents a two dimensional position.
 /// </summary>
 public class Position {
+    private static bool Debugging = false;
     protected int posX = 0;
     protected int posY = 0;
 
@@ -17,18 +20,26 @@ public class Position {
 
     public static Position operator +(Position a, Position b) => new(a.posX + b.posX, a.posY + b.posY);
     public static Position operator -(Position a, Position b) => new(a.posX - b.posX, a.posY - b.posY);
+    public static bool operator ==(Position a, Position b) => a.Equals(b);
+    public static bool operator !=(Position a, Position b) => !a.Equals(b);
 
     public override bool Equals(object obj)
     {
         if (obj.GetType() != GetType()){
+            if (Debugging) Debug.Print(GetType() + ": Other " + obj.GetType() + " is not the same type.");
             return false;
         }
         Position other = (Position)obj;
-        return other.posX == posX && other.posY == posY;
+        return other.X == posX && other.Y == posY;
     }
 
     public override int GetHashCode()
     {
         return (posX, posY).GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        return "(" + posX + ", " + posY + ")";
     }
 }

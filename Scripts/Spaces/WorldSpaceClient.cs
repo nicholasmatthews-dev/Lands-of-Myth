@@ -14,7 +14,6 @@ namespace LOM.Spaces;
 /// </summary>
 public partial class WorldSpaceClient : Space, ENetPacketListener {
     private static bool Debugging = false;
-    private bool _Disposed = false;
     /// <summary>
     /// The name of the space that this WorldSpaceClient represents.
     /// </summary>

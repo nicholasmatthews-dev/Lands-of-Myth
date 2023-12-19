@@ -45,23 +45,38 @@ public abstract class BaseFile : IFileRead, IFileWrite {
             return file.Get64();
         }
         else {
-            throw new Exception("");
+            throw new Exception(GetType() + ": File not open for reading.");
         }
     }
 
     public byte[] ReadBuffer(int bufferLength)
     {
-        return file.GetBuffer(bufferLength);
+        if (CanRead()){
+            return file.GetBuffer(bufferLength);
+        }
+        else {
+            throw new Exception(GetType() + ": File not open for reading.");
+        }
     }
 
     public void StoreInt64(ulong toStore)
     {
-        
+        if (CanWrite()){
+            file.Store64(toStore);
+        }
+        else {
+            throw new Exception(GetType() + ": File not open for writing.");
+        }
     }
 
     public void StoreBuffer(byte[] buffer)
     {
-        throw new System.NotImplementedException();
+        if (CanWrite()){
+            file.StoreBuffer(buffer);
+        }
+        else {
+            throw new Exception(GetType() + ": File not open for writing.");
+        }
     }
 
     public void Close()

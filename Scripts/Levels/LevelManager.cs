@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace LOM.Levels;
 
@@ -14,6 +15,7 @@ namespace LOM.Levels;
 /// </summary>
 public partial class LevelManager : IPositionUpdateListener
 {
+	private static bool Debugging = false;
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>
@@ -113,6 +115,7 @@ public partial class LevelManager : IPositionUpdateListener
 	private void HandlePositionUpdate(){
 		lock(newPositionLock){
 			if (newPosition != lastPosition){
+				if (Debugging) Debug.Print("LevelManager: New position " + newPosition + " differs from " + lastPosition);
 				lastPosition = newPosition;
 				ChangeLoadedCells(lastPosition);
 			}
@@ -125,6 +128,7 @@ public partial class LevelManager : IPositionUpdateListener
 	/// <param name="newSpace">The <c>Space</c> to switch to.</param>
 	/// <param name="newPosition">The center (in cell coordinates) for this <c>LevelManager</c>.</param>
 	public void ChangeActiveSpace(Space newSpace, CellPosition newPosition){
+		if (Debugging) Debug.Print("LevelManager: Change active space called around " + newPosition);
 		activeSpace = newSpace;
 		lastPosition = newPosition;
 		ChangeLoadedCells(lastPosition);
@@ -146,11 +150,12 @@ public partial class LevelManager : IPositionUpdateListener
 	/// </summary>
 	/// <param name="coords">The new coordinates of the center of the loaded cells.</param>
 	private void ChangeLoadedCells(CellPosition coords){
+		if (Debugging) Debug.Print("LevelManager: ChangeLoadedCells called around " + coords);
 		List<CellPosition> cellsToRemove = new List<CellPosition>(9);
 		foreach (KeyValuePair<CellPosition, LevelCell> entry in activeCells){
-			if (Math.Abs(coords.X - entry.Key.X) > 1){
+			if (Math.Abs(coords.X - entry.Key.X) > 1 
+			|| Math.Abs(coords.Y - entry.Key.Y) > 1){
 				cellsToRemove.Add(entry.Key);
-				levelCellUpdates.Enqueue((true, entry.Key, null));
 			}
 		}
 		foreach (CellPosition entry in cellsToRemove){
@@ -171,14 +176,13 @@ public partial class LevelManager : IPositionUpdateListener
 	private void LoadLevelCellFromSpace(CellPosition coords){
 		if (!activeCells.ContainsKey(coords)){
 			Task.Run(() => {
+				if (Debugging) Debug.Print("LevelManager: Attemtping to get cell at " + coords);
 				Task<LevelCell> loadTask = activeSpace.GetLevelCell(coords);
 				loadTask.Wait();
 				LevelCell loaded = loadTask.Result;
 				AddActiveCell(coords, loaded);
 				loadTask.Dispose();
 			});
-			//LevelCell loaded = activeSpace.GetLevelCell(coords);
-			//AddActiveCell(coords, loaded);
 		}
 	}
 
@@ -189,6 +193,7 @@ public partial class LevelManager : IPositionUpdateListener
 	/// <param name="coords">The coordinates (given in the cell grid space).</param>
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
 	private void AddActiveCell(CellPosition coords, LevelCell levelCell){
+		if (Debugging) Debug.Print("LevelManager: Adding cell at " + coords);
 		activeCells.TryAdd(coords, levelCell);
 		levelCellUpdates.Enqueue((false, coords, levelCell));
 	}
@@ -198,8 +203,10 @@ public partial class LevelManager : IPositionUpdateListener
 	/// </summary>
 	/// <param name="coords">The coordinates of the cell to unload.</param>
 	private void DisposeOfCell(CellPosition coords){
+		if (Debugging) Debug.Print("LevelManager: Removing cell at " + coords);
 		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
         activeCells.Remove(coords, out _);
+		levelCellUpdates.Enqueue((true, coords, null));
 	}
 
 	/// <summary>

@@ -14,7 +14,7 @@ public partial class LevelManagerNode : Node2D {
     /// A Dictionary mapping from coordinates in cell space to the <c>LevelCellNodes</c> which
     /// represent those cells.
     /// </summary>
-    private Dictionary<Vector2I, LevelCellNode> activeNodes = new();
+    private Dictionary<CellPosition, LevelCellNode> activeNodes = new();
     private TileSetManager tileSetManager;
 
     public LevelManagerNode(LevelManager referenceManager, TileSetManager tileSetManager) : base(){
@@ -30,7 +30,7 @@ public partial class LevelManagerNode : Node2D {
     public override void _Process(double delta)
     {
         while(true){
-            if (referenceManager.levelCellUpdates.TryDequeue(out (bool, Vector2I, LevelCell) update)){
+            if (referenceManager.levelCellUpdates.TryDequeue(out (bool, CellPosition, LevelCell) update)){
                 ProcessUpdate(update);
             }
             else{
@@ -44,7 +44,7 @@ public partial class LevelManagerNode : Node2D {
     /// appropriate.
     /// </summary>
     /// <param name="update">The update in the form of (Removed, CellCoords, LevelCell).</param>
-    private void ProcessUpdate((bool, Vector2I, LevelCell) update){
+    private void ProcessUpdate((bool, CellPosition, LevelCell) update){
         if (update.Item1){
             RemoveCell(update.Item2);
         }
@@ -58,7 +58,7 @@ public partial class LevelManagerNode : Node2D {
     /// and frees the corresponding node.
     /// </summary>
     /// <param name="coords">The coordinates in cell space of the LevelCell to remove.</param>
-    private void RemoveCell(Vector2I coords){
+    private void RemoveCell(CellPosition coords){
         if (!activeNodes.ContainsKey(coords)){
             return;
         }
@@ -74,7 +74,7 @@ public partial class LevelManagerNode : Node2D {
     /// </summary>
     /// <param name="coords">The coordinates of the cell to add in cell space.</param>
     /// <param name="toAdd">The LevelCell to be added.</param>
-    private void AddCell(Vector2I coords, LevelCell toAdd){
+    private void AddCell(CellPosition coords, LevelCell toAdd){
         LevelCellNode newNode = new(toAdd, tileSetManager)
         {
             Position = new Vector2

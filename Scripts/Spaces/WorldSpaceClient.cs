@@ -30,7 +30,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
     /// holds information about the request and will contain the payload when the request is
     /// fulfilled.
     /// </summary>
-    private ConcurrentDictionary<Vector2I, (EventWaitHandle, WorldCellRequest)> requestHandles = new();
+    private ConcurrentDictionary<CellPosition, (EventWaitHandle, WorldCellRequest)> requestHandles = new();
     /// <summary>
     /// The ENetChannel that this object communicates with the server on.
     /// </summary>
@@ -42,7 +42,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
         netClient.AddPacketListener(communicationChannel, this);
     }
 
-    public override Task<LevelCell> GetLevelCell(Vector2I cellCoords)
+    public Task<LevelCell> GetLevelCell(CellPosition cellCoords)
     {
         return CreateRetrievalTask(cellCoords);
     }
@@ -54,7 +54,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
     /// </summary>
     /// <param name="cellCoords">The coordinates of the <c>LevelCell</c> to retrieve.</param>
     /// <returns>A task which will retrieve the <c>LevelCell</c> at the given coordinates.</returns>
-    private Task<LevelCell> CreateRetrievalTask(Vector2I cellCoords){
+    private Task<LevelCell> CreateRetrievalTask(CellPosition cellCoords){
         return Task.Run(() => {
             WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
@@ -89,7 +89,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
             return;
         }
         if (Debugging) Debug.Print("WorldSpaceClient: Received request: " + request);
-        Vector2I coords = request.coords;
+        CellPosition coords = request.coords;
         (EventWaitHandle, WorldCellRequest) entry;
         if (requestHandles.TryGetValue(coords, out entry)){
             if (requestHandles.TryUpdate(coords, (entry.Item1, request), entry)){
@@ -98,19 +98,8 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
         }
     }
 
-    public override void StoreBytesToCell(byte[] cellToStore, Vector2I cellCoords)
+    public void StoreBytesToCell(byte[] cellToStore, CellPosition cellCoords)
     {
         return;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (_Disposed){
-            return;
-        }
-        if (disposing){
-            netClient = null;
-        }
-        base.Dispose(disposing);
     }
 }

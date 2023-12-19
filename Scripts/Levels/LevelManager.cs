@@ -1,6 +1,5 @@
 using LOM.Control;
 using LOM.Spaces;
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -13,7 +12,7 @@ namespace LOM.Levels;
 /// Represents a manager which is responsible for retrieving the appropriate
 /// <c>LevelCells</c> from its active <c>Space</c>.
 /// </summary>
-public partial class LevelManager : PositionUpdateListener
+public partial class LevelManager : IPositionUpdateListener
 {
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
@@ -43,19 +42,19 @@ public partial class LevelManager : PositionUpdateListener
 	/// <summary>
 	/// The last center (in cell coordinates) for the LevelManager's loaded cells.
 	/// </summary>
-	private Vector2I lastPosition = new(0,0);
+	private CellPosition lastPosition = new(0,0);
 
 	/// <summary>
 	/// The collection of active map cells, 
 	/// indexed by their position (counted by number of cells from the origin).
 	/// </summary>
-	private ConcurrentDictionary<Vector2I,LevelCell> activeCells = new();
+	private ConcurrentDictionary<CellPosition,LevelCell> activeCells = new();
 
 	/// <summary>
 	/// A queue that holds all the updates to levelCells that have not been processed by the node
 	/// which listens to this object. The form is (bool removed, Vector2I coords, LevelCell newCell).
 	/// </summary>
-	public ConcurrentQueue<(bool, Vector2I, LevelCell)> levelCellUpdates = new();
+	public ConcurrentQueue<(bool, CellPosition, LevelCell)> levelCellUpdates = new();
 
 	/// <summary>
 	/// The thread which handles all the processing for this LevelManager, this is to keep the
@@ -71,9 +70,9 @@ public partial class LevelManager : PositionUpdateListener
 	/// </summary>
 	private object newPositionLock = new();
 	/// <summary>
-	/// The newest position from OnPositionUpdate.
+	/// The newest position from OnPositionUpdate (in cell coordinates).
 	/// </summary>
-	private Vector2I newPosition = new(0,0);
+	private CellPosition newPosition = new(0,0);
 	/// <summary>
 	/// The handle for registering whether the thread should be resumed to respond to a position update.
 	/// </summary>
@@ -125,16 +124,15 @@ public partial class LevelManager : PositionUpdateListener
 	/// </summary>
 	/// <param name="newSpace">The <c>Space</c> to switch to.</param>
 	/// <param name="newPosition">The center (in cell coordinates) for this <c>LevelManager</c>.</param>
-	public void ChangeActiveSpace(Space newSpace, Vector2I newPosition){
+	public void ChangeActiveSpace(Space newSpace, CellPosition newPosition){
 		activeSpace = newSpace;
 		lastPosition = newPosition;
 		ChangeLoadedCells(lastPosition);
 	}
 
-	public void OnPositionUpdate(Vector2I coords){
-		List<Vector2I> translatedCoords = TranslateCoords(coords);
+	public void OnPositionUpdate(WorldPosition coords){
 		lock(newPositionLock){
-			newPosition = translatedCoords[0];
+			newPosition = coords.GetCellCoords(CellWidth, CellHeight).Item1;
 		}
 		positionUpdateHandle.Set();
 	}
@@ -147,20 +145,20 @@ public partial class LevelManager : PositionUpdateListener
 	/// </para>
 	/// </summary>
 	/// <param name="coords">The new coordinates of the center of the loaded cells.</param>
-	private void ChangeLoadedCells(Vector2I coords){
-		List<Vector2I> cellsToRemove = new List<Vector2I>(9);
-		foreach (KeyValuePair<Vector2I, LevelCell> entry in activeCells){
+	private void ChangeLoadedCells(CellPosition coords){
+		List<CellPosition> cellsToRemove = new List<CellPosition>(9);
+		foreach (KeyValuePair<CellPosition, LevelCell> entry in activeCells){
 			if (Math.Abs(coords.X - entry.Key.X) > 1){
 				cellsToRemove.Add(entry.Key);
 				levelCellUpdates.Enqueue((true, entry.Key, null));
 			}
 		}
-		foreach (Vector2I entry in cellsToRemove){
+		foreach (CellPosition entry in cellsToRemove){
 			DisposeOfCell(entry);
 		}
 		for (int i = -1; i < 2; i++){
 			for (int j = -1; j < 2; j++){
-				Vector2I currentCoords = new Vector2I(i + coords.X, j + coords.Y);
+				CellPosition currentCoords = new CellPosition(i + coords.X, j + coords.Y);
 				LoadLevelCellFromSpace(currentCoords);
 			}
 		}
@@ -170,7 +168,7 @@ public partial class LevelManager : PositionUpdateListener
 	/// Loads in a LevelCell at the given coords from the currently active Space.
 	/// </summary>
 	/// <param name="coords">The coordinates of the LevelCell to be loaded.</param>
-	private void LoadLevelCellFromSpace(Vector2I coords){
+	private void LoadLevelCellFromSpace(CellPosition coords){
 		if (!activeCells.ContainsKey(coords)){
 			Task.Run(() => {
 				Task<LevelCell> loadTask = activeSpace.GetLevelCell(coords);
@@ -190,7 +188,7 @@ public partial class LevelManager : PositionUpdateListener
 	/// </summary>
 	/// <param name="coords">The coordinates (given in the cell grid space).</param>
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
-	private void AddActiveCell(Vector2I coords, LevelCell levelCell){
+	private void AddActiveCell(CellPosition coords, LevelCell levelCell){
 		activeCells.TryAdd(coords, levelCell);
 		levelCellUpdates.Enqueue((false, coords, levelCell));
 	}
@@ -199,7 +197,7 @@ public partial class LevelManager : PositionUpdateListener
 	/// Unloads the cell at the given coordinates.
 	/// </summary>
 	/// <param name="coords">The coordinates of the cell to unload.</param>
-	private void DisposeOfCell(Vector2I coords){
+	private void DisposeOfCell(CellPosition coords){
 		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
         activeCells.Remove(coords, out _);
 	}
@@ -210,59 +208,20 @@ public partial class LevelManager : PositionUpdateListener
 	/// </summary>
 	/// <param name="occupied">The positions to check to see if they are valid.</param>
 	/// <returns>True if the full collection of positions are all unoccupied, false otherwise.</returns>
-	public bool PositionValid(ICollection<Vector2I> occupied){
+	public bool PositionValid(ICollection<WorldPosition> occupied){
 		bool valid = true;
-		foreach (Vector2I position in occupied){
-			List<Vector2I> cellCoords = TranslateCoords(position);
-			List<(int, int)> toCheck = new List<(int, int)>
+		foreach (WorldPosition position in occupied){
+			(CellPosition, Position) coordsTuple = position.GetCellCoords(CellWidth, CellHeight);
+			Position localPosition = coordsTuple.Item2;
+			List<Position> toCheck = new List<Position>
             {
-                (cellCoords[1].X, cellCoords[1].Y)
+                localPosition
             };
-			if (activeCells.ContainsKey(cellCoords[0])){
-				valid = valid && activeCells[cellCoords[0]].PositionValid(toCheck);
+			if (activeCells.ContainsKey(coordsTuple.Item1)){
+				valid = valid && activeCells[coordsTuple.Item1].PositionValid(toCheck);
 			}
 		}
 		return valid;
-	}
-
-	/// <summary>
-	/// Translates from a global coordinates system to the cell coordinates, and the coordinates
-	/// within that cell. The first item in the returned list is the cell, and the second item
-	/// is the coordinates locally within that cell.
-	/// </summary>
-	/// <param name="coords"></param>
-	/// <returns></returns>
-	private List<Vector2I> TranslateCoords(Vector2I coords){
-		List<Vector2I> output = new List<Vector2I>();
-		
-		//Calculates the appropriate cell that coords lies in
-		int cellX = FloorDivision(coords.X, CellWidth);
-		int cellY = FloorDivision(coords.Y, CellHeight);
-		Vector2I cellPosition = new Vector2I(cellX, cellY);
-		
-		//Calculates the coordinates relative to the origin of the cell coords lies in
-		int localX = coords.X % CellWidth;
-		if (localX < 0){
-			localX += CellWidth;
-		}
-		int localY = coords.Y % CellHeight;
-		if (localY < 0){
-			localY += CellHeight;
-		}
-		Vector2I localPosition = new Vector2I(localX, localY);
-		
-		output.Add(cellPosition);
-		output.Add(localPosition);
-		return output;
-	}
-
-	private static int FloorDivision(int a, int b){
-		if (((a < 0) || (b < 0)) && (a % b != 0)){
-			return (a / b - 1);
-		}
-		else {
-			return (a / b);
-		}
 	}
 
 }

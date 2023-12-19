@@ -1,6 +1,3 @@
-using Godot;
-using System;
-
 namespace LOM.Spaces;
 
 public class World {

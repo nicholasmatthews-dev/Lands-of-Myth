@@ -11,6 +11,6 @@ public class GameModel {
     public TileSetManager TileSetManager { get => tileSetManager; }
 
     public void ChangeActiveSpace(Space newSpace, Vector2I newCoords){
-        LevelManager.ChangeActiveSpace(newSpace, newCoords);
+        LevelManager.ChangeActiveSpace(newSpace, new CellPosition(newCoords.X, newCoords.Y));
     }
 }

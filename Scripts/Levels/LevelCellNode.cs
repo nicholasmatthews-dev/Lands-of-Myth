@@ -48,10 +48,10 @@ public partial class LevelCellNode : Node2D {
         }
         int tilesLoaded = 0;
         while (tilesLoaded <= tilesPerFrame){
-            if (referenceCell.tileUpdates.TryDequeue(out ((int, int, int), Tile) tileUpdate))
+            if (referenceCell.tileUpdates.TryDequeue(out ((Position, int), Tile) tileUpdate))
             {
-                int layer = tileUpdate.Item1.Item3;
-                (int, int) coords = (tileUpdate.Item1.Item1, tileUpdate.Item1.Item2);
+                int layer = tileUpdate.Item1.Item2;
+                Position coords = tileUpdate.Item1.Item1;
                 Tile tile = tileUpdate.Item2;
                 Place(layer, coords, tile);
                 tilesLoaded++;
@@ -68,12 +68,12 @@ public partial class LevelCellNode : Node2D {
     /// <param name="layer">The layer to place on.</param>
     /// <param name="coords">The coordinates of the tile to place.</param>
     /// <param name="tile">The tile to be placed.</param>
-    private void Place(int layer, (int, int) coords, Tile tile){
+    private void Place(int layer, Position coords, Tile tile){
         int sourceId = referenceCell.GetAtlasId(tile.tileSetRef);
         tileMap.SetCell
         (
             layer, 
-            new Vector2I(coords.Item1, coords.Item2), 
+            new Vector2I(coords.X, coords.Y), 
             sourceId, 
             new Vector2I(tile.atlasX, tile.atlasY)
         );

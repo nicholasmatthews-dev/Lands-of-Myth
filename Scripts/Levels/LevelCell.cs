@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace LOM.Levels;
@@ -16,7 +15,7 @@ public partial class LevelCell
 	/// <summary>
 	/// The number of layers in the <c>LevelCell</c>'s <c>TileMap</c>.
 	/// </summary>
-	private static int numLayers = 3;
+	public static int NumLayers = 3;
 
 	/// <summary>
 	/// A <c>TileMap</c> representing the tiles contained in this cell.
@@ -41,7 +40,7 @@ public partial class LevelCell
 	/// Represents the tiles in this <c>LevelCell</c> ordered as [X, Y, Layer]. Tiles are 
 	/// represented as codes given by the mapping in codesToTiles.
 	/// </summary>
-	private int[,,] tiles = new int[Width, Height, numLayers];
+	private int[,,] tiles = new int[Width, Height, NumLayers];
 	/// <summary>
 	/// Represents a mapping between different <c>Tile</c> types and their internal code representation.
 	/// </summary>
@@ -57,7 +56,7 @@ public partial class LevelCell
 	/// Holds all the updates to the <c>Tiles</c> in this <c>LevelCell</c> given as a tuple with the format 
 	/// ((X, Y, Layer), PlacedTile). Meant to be consumed by a listener such as <c>LevelCellNode</c>.
 	/// </summary>
-	public ConcurrentQueue<((int, int, int), Tile)> tileUpdates = new();
+	public ConcurrentQueue<((Position, int), Tile)> tileUpdates = new();
 
 	private TileSetManager tileSetManager;
 
@@ -66,7 +65,7 @@ public partial class LevelCell
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
 				Solid[i,j] = false;
-				for (int k = 0; k < numLayers; k++){
+				for (int k = 0; k < NumLayers; k++){
 					tiles[i,j,k] = 0;
 				}
 			}
@@ -80,8 +79,8 @@ public partial class LevelCell
 	/// <param name="coords"></param>
 	/// <param name="layer"></param>
 	/// <returns></returns>
-	private Tile GetTile((int, int) coords, int layer){
-		return codesToTiles[tiles[coords.Item1, coords.Item2, layer]];
+	private Tile GetTile(Position coords, int layer){
+		return codesToTiles[tiles[coords.X, coords.Y, layer]];
 	}
 
 	/// <summary>
@@ -90,8 +89,8 @@ public partial class LevelCell
 	public void CheckSolid(){
 		for (int i=0; i < Width; i++){
 			for (int j=0; j < Height; j++){
-				for (int k=0; k < numLayers; k++){
-					Tile cellData = GetTile((i, j), k);
+				for (int k=0; k < NumLayers; k++){
+					Tile cellData = GetTile(new Position(i, j), k);
 					if (cellData is null){
 						break;
 					}
@@ -107,12 +106,12 @@ public partial class LevelCell
 	/// </summary>
 	/// <param name="occupied">The collection of tiles to check collision for.</param>
 	/// <returns><c>True</c> if none of the tiles are solid, <c>False</c> otherwise.</returns>
-	public bool PositionValid(ICollection<(int, int)> occupied){
+	public bool PositionValid(ICollection<Position> occupied){
 		bool valid = true;
-		foreach ((int, int) position in occupied){
-			if (position.Item1 >= 0 && position.Item1 < Width){
-				if (position.Item2 >= 0 && position.Item2 < Height){
-					valid = valid && !Solid[position.Item1, position.Item2];
+		foreach (Position position in occupied){
+			if (position.X >= 0 && position.X < Width){
+				if (position.Y >= 0 && position.Y < Height){
+					valid = valid && !Solid[position.X, position.Y];
 				}
 			}
 		}
@@ -126,12 +125,22 @@ public partial class LevelCell
 	/// <param name="tileSetRef">The reference id for the tileset to be used.</param>
 	/// <param name="coords">The position to place the tile on.</param>
 	/// <param name="atlasCoords">The atlas coordinates of the tile to draw.</param>
-	public void Place(int layer, (int, int) coords, Tile toPlace){
+	public void Place(int layer, Position coords, Tile toPlace){
 		int code = GetTileAsCode(toPlace);
 		Tile permTile = codesToTiles[code];
-		tiles[coords.Item1, coords.Item2, layer] = code;
-		Solid[coords.Item1,coords.Item2] = Solid[coords.Item1, coords.Item2] || permTile.isSolid;
-		tileUpdates.Enqueue(((coords.Item1, coords.Item2, layer), permTile));
+		tiles[coords.X, coords.Y, layer] = code;
+		Solid[coords.X,coords.Y] = Solid[coords.X, coords.Y] || permTile.isSolid;
+		tileUpdates.Enqueue(((coords, layer), permTile));
+	}
+
+	public void PlaceAll(int startLayer, Position startCoords, Tile[,,] toPlace){
+		for (int i = 0; i < toPlace.GetLength(0); i++){
+			for (int j = 0; j < toPlace.GetLength(1); j++){
+				for (int k = 0; k < toPlace.GetLength(2); k++){
+					Place(k + startLayer, new Position(i, j) + startCoords, toPlace[i,j,k]);
+				}
+			}
+		}
 	}
 
 	/// <summary>
@@ -314,11 +323,11 @@ public partial class LevelCell
 		}
 		int tileBits = SerializationHelper.RepresentativeBits(totalTiles);
 		int bytesToRead;
-		if (tileBits * Width * Height * numLayers % 8 == 0){
-			bytesToRead = tileBits * Width * Height * numLayers / 8;
+		if (tileBits * Width * Height * NumLayers % 8 == 0){
+			bytesToRead = tileBits * Width * Height * NumLayers / 8;
 		}
 		else {
-			bytesToRead = tileBits * Width * Height * numLayers / 8 + 1;
+			bytesToRead = tileBits * Width * Height * NumLayers / 8 + 1;
 		}
 		List<byte> payload = input.GetRange(0,bytesToRead);
 		List<int> payloadInts = new List<int>(payload.Count);
@@ -340,10 +349,10 @@ public partial class LevelCell
 	/// <returns>A list of tile identifier codes as described above.</returns>
 	private List<int> GetTilesAsCodeArray(Dictionary<Tile, int> uniqueTiles){
 		List<int> tileCodes = new List<int>();
-		for (int i = 0; i < numLayers; i++){
+		for (int i = 0; i < NumLayers; i++){
 			for (int j = 0; j < Width; j++){
 				for (int k = 0; k < Height; k++){
-					Tile tileIdentifier = GetTile((j,k), i);
+					Tile tileIdentifier = GetTile(new Position(j, k), i);
 					int currentCode = uniqueTiles[tileIdentifier];
 					tileCodes.Add(currentCode);
 				}
@@ -374,7 +383,7 @@ public partial class LevelCell
 				toModify.Place
 				(
 					layer, 
-					(X, Y), 
+					new Position(X, Y), 
 					currentTile
 				);
 			}
@@ -394,8 +403,8 @@ public partial class LevelCell
 		// Count all the unique tiles, grouped into sets by tileSet
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
-				for (int k = 0; k < numLayers; k++){
-					Tile tileType = GetTile((i, j), k);
+				for (int k = 0; k < NumLayers; k++){
+					Tile tileType = GetTile(new Position(i, j), k);
 					if (tileType.tileSetRef == -1){
 						break;
 					}

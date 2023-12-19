@@ -1,13 +1,14 @@
-using Godot;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
 using LOM.Levels;
+using LOM.Files;
 
 namespace LOM.Spaces;
 
 public partial class WorldSpace : Space {
+    private static bool Debugging = true;
     private int id = 0;
     private string spaceName = "Overworld";
     private string basePath;
@@ -16,19 +17,12 @@ public partial class WorldSpace : Space {
     public WorldSpace(TileSetManager tileSetManager) : base(){
         this.tileSetManager = tileSetManager;
         basePath = Main.world.GetSavePath() + "/" + spaceName;
-        Debug.Print("WorldSpace: Attempting to create directory: \"" + basePath + "\"");
-        Error error = DirAccess.MakeDirRecursiveAbsolute(basePath);
-        Debug.Print("WorldSpace: Error is " + error);
+        Directory.Ensure(basePath);
     }
 
-    public override Task<LevelCell> GetLevelCell(Vector2I coords){
-        FileAccess file = FileAccess.OpenCompressed
-        (
-            GetFullCellPathByCoords(coords), 
-            FileAccess.ModeFlags.Read,
-            compressionMode
-        );
-        if (file is null){
+    public Task<LevelCell> GetLevelCell(CellPosition coords){
+        CompressedFile file = new(GetFullCellPathByCoords(coords), CompressedFile.ReadWriteMode.Read);
+        if (!file.IsOpened()){
             return Task.Run(() => {
                 return GenerateNewCell(coords);
             });
@@ -38,19 +32,14 @@ public partial class WorldSpace : Space {
         });
     }
 
-    public override void StoreBytesToCell(byte[] cellToStore, Vector2I coords){
-        using var file = FileAccess.OpenCompressed
-        (
-            GetFullCellPathByCoords(coords), 
-            FileAccess.ModeFlags.Write,
-            compressionMode
-        );
-        if (file is null){
+    public void StoreBytesToCell(byte[] cellToStore, CellPosition coords){
+        CompressedFile file = new(GetFullCellPathByCoords(coords), CompressedFile.ReadWriteMode.Write);
+        if (!file.IsOpened()){
+            if (Debugging) 
             Debug.Print("WorldSpace: Attempt to write to " + GetFullCellPathByCoords(coords) + " failed.");
-            Debug.Print("WorldSpace: Error: " + FileAccess.GetOpenError());
             return;
         }
-        file.Store64((ulong)cellToStore.Length);
+        file.StoreInt64((ulong)cellToStore.Length);
         file.StoreBuffer(cellToStore);
     }
 
@@ -59,9 +48,9 @@ public partial class WorldSpace : Space {
     /// </summary>
     /// <param name="file">The file to be opened.</param>
     /// <returns>The LevelCell stored in the file.</returns>
-    private static LevelCell LoadCellFromDisk(FileAccess file, TileSetManager tileSetManager){
-        int bufferLength = (int)file.Get64();
-        byte[] buffer = file.GetBuffer(bufferLength);
+    private static LevelCell LoadCellFromDisk(IFileRead file, TileSetManager tileSetManager){
+        int bufferLength = (int)file.ReadInt64();
+        byte[] buffer = file.ReadBuffer(bufferLength);
         file.Close();
         return LevelCell.Deserialize(buffer, tileSetManager);
     }
@@ -72,7 +61,7 @@ public partial class WorldSpace : Space {
     /// <param name="coords">The coordinates of the <c>LevelCell</c> to generate in cell 
     /// space.</param>
     /// <returns>A newly generated <c>LevelCell</c> at the given coordinates.</returns>
-    private LevelCell GenerateNewCell(Vector2I coords){
+    private LevelCell GenerateNewCell(CellPosition coords){
         int forestRefId = tileSetManager.GetTileSetCode("Forest");
         LevelCell newCell = new LevelCell(tileSetManager);
         Tile fill;
@@ -84,7 +73,7 @@ public partial class WorldSpace : Space {
         }
         for (int i = 0; i < LevelCell.Width; i++){
             for (int j = 0; j < LevelCell.Height; j++){
-                newCell.Place(0, (i, j), fill);
+                newCell.Place(0, new Position(i, j), fill);
             }
         }
         if (coords.X == 0 && coords.Y == 0){
@@ -99,21 +88,12 @@ public partial class WorldSpace : Space {
     /// <param name="input">The <c>LevelCell</c> to be modified.</param>
     private void AddStructure(ref LevelCell input){
 		int buildingsRefId = tileSetManager.GetTileSetCode("Elf_Buildings");
-		TileMap houses = (TileMap)ResourceLoader
-		.Load<PackedScene>("res://Scenes/Maps/elf_buildings_test.tscn")
-		.Instantiate();
-		for (int i = 0; i < LevelCell.Width; i++){
-			for (int j = 0; j < LevelCell.Height; j++){
-				for (int k = 0; k < 2; k++){
-                    if (houses.GetCellSourceId(k, new Vector2I(i,j)) != -1){
-                        Vector2I atlasCoords = houses.GetCellAtlasCoords(k, new Vector2I(i, j));
-                        Tile toPlace = new(buildingsRefId, atlasCoords.X, atlasCoords.Y);
-                        input.Place(k + 1, (i,j), toPlace);
-                    }
-				}
-			}
-		}
-		houses.Free();
+		TileMapLoader loader = new(tileSetManager, 
+        "res://Scenes/Maps/elf_buildings_test.tscn", 
+        LevelCell.Width,
+        LevelCell.Height,
+        LevelCell.NumLayers);
+        input.PlaceAll(0, new Position(0,0), loader.Load(buildingsRefId));
 	}
 
     /// <summary>
@@ -121,7 +101,7 @@ public partial class WorldSpace : Space {
     /// </summary>
     /// <param name="coords">The coordinates of the <c>LevelCell</c> in question.</param>
     /// <returns>A string giving the path as specified above.</returns>
-    private string GetFullCellPathByCoords(Vector2I coords){
+    private string GetFullCellPathByCoords(CellPosition coords){
         string cellPath = GetCellFileName(coords);
         return basePath + "/" + cellPath + ".dat";
     }
@@ -131,7 +111,7 @@ public partial class WorldSpace : Space {
     /// </summary>
     /// <param name="coords">The coordinates of the <c>LevelCell</c> in question.</param>
     /// <returns>A string representing the file name of the <c>LevelCell</c></returns>
-    private static string GetCellFileName(Vector2I coords){
+    private static string GetCellFileName(CellPosition coords){
         return coords.X + "_" + coords.Y;
     }
 

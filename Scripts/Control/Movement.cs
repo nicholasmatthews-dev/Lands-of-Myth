@@ -43,7 +43,7 @@ public partial class Movement : Node, IPositionUpdateSource
 
 	private bool destinationReached = true;
 
-	private HashSet<WeakReference<PositionUpdateListener>> positionUpdateListeners = new();
+	private HashSet<WeakReference<IPositionUpdateListener>> positionUpdateListeners = new();
 
 	private Vector2I PositionCoord = new(0,0);
 	private Vector2I DestinationCoord = new(0,0);
@@ -75,9 +75,9 @@ public partial class Movement : Node, IPositionUpdateSource
 	/// </para>
 	/// </summary>
 	/// <param name="listener">The listener which wishes to subscribe to this object.</param>
-	public void AddPositionUpdateListener(PositionUpdateListener listener){
-		WeakReference<PositionUpdateListener> reference 
-		= new WeakReference<PositionUpdateListener>(listener);
+	public void AddPositionUpdateListener(IPositionUpdateListener listener){
+		WeakReference<IPositionUpdateListener> reference 
+		= new WeakReference<IPositionUpdateListener>(listener);
 		positionUpdateListeners.Add(reference);
 	}
 
@@ -89,17 +89,17 @@ public partial class Movement : Node, IPositionUpdateSource
 	/// </para>
 	/// </summary>
 	private void SignalPositionUpdate(){
-		List<WeakReference<PositionUpdateListener>> deadReferences = new(positionUpdateListeners.Count);
-		foreach (WeakReference<PositionUpdateListener> reference in positionUpdateListeners){
-            if (reference.TryGetTarget(out PositionUpdateListener listener))
+		List<WeakReference<IPositionUpdateListener>> deadReferences = new(positionUpdateListeners.Count);
+		foreach (WeakReference<IPositionUpdateListener> reference in positionUpdateListeners){
+            if (reference.TryGetTarget(out IPositionUpdateListener listener))
             {
-                listener.OnPositionUpdate(PositionCoord);
+                listener.OnPositionUpdate(new WorldPosition(PositionCoord.X, PositionCoord.Y));
             }
 			else {
 				deadReferences.Add(reference);
 			}
         }
-		foreach (WeakReference<PositionUpdateListener> reference in deadReferences){
+		foreach (WeakReference<IPositionUpdateListener> reference in deadReferences){
 			positionUpdateListeners.Remove(reference);
 		}
 	}
@@ -132,10 +132,10 @@ public partial class Movement : Node, IPositionUpdateSource
 	}
 
 	private bool CheckCollision(Vector2I destinationPoint){
-		List<Vector2I> occupied = new List<Vector2I>();
+		List<WorldPosition> occupied = new List<WorldPosition>();
 		for (int i = 0; i < Width; i++){
 			for (int j = 0; j < Height; j++){
-				occupied.Add(new Vector2I(destinationPoint.X + i, destinationPoint.Y + j));
+				occupied.Add(new WorldPosition(destinationPoint.X + i, destinationPoint.Y + j));
 			}
 		}
 		return ActiveLevel.PositionValid(occupied);

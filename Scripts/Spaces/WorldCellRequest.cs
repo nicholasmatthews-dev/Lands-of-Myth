@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using Godot;
+using LOM.Levels;
 
 namespace LOM.Spaces;
 
@@ -13,11 +13,11 @@ public class WorldCellRequest {
     public static byte MagicNumber = 4;
 
     public string spaceName;
-    public Vector2I coords;
+    public CellPosition coords;
     public RequestStatus status;
     public byte[] payload;
 
-    public WorldCellRequest(string spaceName, Vector2I coords){
+    public WorldCellRequest(string spaceName, CellPosition coords){
         this.spaceName = spaceName;
         this.coords = coords;
         status = RequestStatus.Open;
@@ -56,7 +56,7 @@ public class WorldCellRequest {
         string spaceName = SerializationHelper.ReadString(input, ref byteHead);
         int coordsX = SerializationHelper.ReadInt(input, ref byteHead);
         int coordsY = SerializationHelper.ReadInt(input, ref byteHead);
-        Vector2I coords = new(coordsX, coordsY);
+        CellPosition coords = new(coordsX, coordsY);
         if (byteHead >= input.Length){
             return new WorldCellRequest(spaceName, coords){
                 status = status

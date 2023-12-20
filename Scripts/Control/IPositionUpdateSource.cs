@@ -1,5 +1,3 @@
-using Godot;
-
 namespace LOM.Control;
 
 public interface IPositionUpdateSource {

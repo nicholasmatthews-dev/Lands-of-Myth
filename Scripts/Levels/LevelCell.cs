@@ -54,7 +54,7 @@ public partial class LevelCell
 
 	/// <summary>
 	/// Holds all the updates to the <c>Tiles</c> in this <c>LevelCell</c> given as a tuple with the format 
-	/// ((X, Y, Layer), PlacedTile). Meant to be consumed by a listener such as <c>LevelCellNode</c>.
+	/// ((Position, Layer), PlacedTile). Meant to be consumed by a listener such as <c>LevelCellNode</c>.
 	/// </summary>
 	public ConcurrentQueue<((Position, int), Tile)> tileUpdates = new();
 

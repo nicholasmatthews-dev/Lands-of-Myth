@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 
 namespace LOM.Levels;
@@ -31,6 +32,26 @@ public class Position {
         }
         Position other = (Position)obj;
         return other.X == posX && other.Y == posY;
+    }
+
+    public byte[] Serialize(){
+        byte[] output = new byte[8];
+        int byteHead = 0;
+        SerializationHelper.StoreInt(ref output, X, ref byteHead);
+        SerializationHelper.StoreInt(ref output, Y, ref byteHead);
+        return output;
+    }
+
+    public static Position Deserialize(byte[] bytes){
+        if (bytes.Length != 8){
+            throw new ArgumentException("Position: Error in deserializing postion " 
+            + bytes.Length 
+            + " is not 8 bytes.");
+        }
+        int byteHead = 0;
+        int readX = SerializationHelper.ReadInt(bytes, ref byteHead);
+        int readY = SerializationHelper.ReadInt(bytes, ref byteHead);
+        return new Position(readX, readY);
     }
 
     public override int GetHashCode()

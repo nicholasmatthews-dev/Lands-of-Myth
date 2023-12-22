@@ -117,6 +117,68 @@ public static class SerializationHelper {
 		return (int)Math.Ceiling(Math.Log2(input));
 	}
 
+	/// <summary>
+	/// Returns a byte array with all the input byte arrays bound together with a 4 byte
+	/// buffer between each byte array which indicates the length of the following array.
+	/// This can then be read back into a List of byte arrays via Unstitch.
+	/// </summary>
+	/// <param name="input">The collection of byte arrays to be stitched together.</param>
+	/// <returns>A byte array as described above.</returns>
+	public static byte[] Stitch(IEnumerable<byte[]> input){
+		int totalLength = 0;
+		foreach (byte[] array in input){
+			totalLength += array.Length + 4;
+		}
+		byte[] output = new byte[totalLength];
+		int byteHead = 0;
+		foreach (byte[] array in input){
+			StoreInt(ref output, array.Length, ref byteHead);
+			AppendBytes(ref output, array, ref byteHead);
+		}
+		return output;
+	}
+
+	public static byte[] Stitch(int magicNumber, IEnumerable<byte[]> input){
+		int totalLength = 4;
+		foreach (byte[] array in input){
+			totalLength += array.Length + 4;
+		}
+		byte[] output = new byte[totalLength];
+		int byteHead = 0;
+		StoreInt(ref output, magicNumber, ref byteHead);
+		foreach (byte[] array in input){
+			StoreInt(ref output, array.Length, ref byteHead);
+			AppendBytes(ref output, array, ref byteHead);
+		}
+		return output;
+	}
+
+	public static List<byte[]> Unstitch(byte[] input){
+		int byteHead = 0;
+		List<byte[]> collection = new();
+		while (byteHead < input.Length){
+			int bufferLength = ReadInt(input, ref byteHead);
+			byte[] buffer = ReadBytes(input, bufferLength, ref byteHead);
+			collection.Add(buffer);
+		}
+		return collection;
+	}
+
+	public static List<byte[]> Unstitch(int magicNumber, byte[] input){
+		int byteHead = 0;
+		int readMagic = ReadInt(input, ref byteHead);
+		if (readMagic != magicNumber){
+			throw new Exception("Magic number mismatch " + readMagic + " does not equal " + magicNumber);
+		}
+		List<byte[]> collection = new();
+		while (byteHead < input.Length){
+			int bufferLength = ReadInt(input, ref byteHead);
+			byte[] buffer = ReadBytes(input, bufferLength, ref byteHead);
+			collection.Add(buffer);
+		}
+		return collection;
+	}
+
 	public static void AppendBytes(ref byte[] bytes, byte[] toAdd, ref int byteHead){
 		for (int i = 0; i < toAdd.Length; i++){
 			bytes[byteHead] = toAdd[i];

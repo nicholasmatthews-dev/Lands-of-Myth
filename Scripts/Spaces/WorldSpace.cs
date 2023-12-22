@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using LOM.Levels;
 using LOM.Files;
+using System.Text;
 
 namespace LOM.Spaces;
 
@@ -14,7 +15,8 @@ public partial class WorldSpace : Space {
     private string basePath;
     private TileSetManager tileSetManager;
 
-    public WorldSpace(TileSetManager tileSetManager) : base(){
+    public WorldSpace(string spaceName, TileSetManager tileSetManager){
+        this.spaceName = spaceName;
         this.tileSetManager = tileSetManager;
         basePath = Main.world.GetSavePath() + "/" + spaceName;
         Directory.Ensure(basePath);
@@ -113,6 +115,15 @@ public partial class WorldSpace : Space {
     /// <returns>A string representing the file name of the <c>LevelCell</c></returns>
     private static string GetCellFileName(CellPosition coords){
         return coords.X + "_" + coords.Y;
+    }
+
+    public byte[] Serialize(){
+        return Encoding.ASCII.GetBytes(spaceName);
+    }
+
+    public static WorldSpace Deserialize(byte[] input, TileSetManager tileSetManager){
+        string name = Encoding.ASCII.GetString(input);
+        return new WorldSpace(name, tileSetManager);
     }
 
 }

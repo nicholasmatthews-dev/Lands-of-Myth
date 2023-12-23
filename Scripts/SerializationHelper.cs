@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 public static class SerializationHelper {
+	private static bool Debugging = true;
 	/// <summary>
 	/// Converts a list of integers with specified bit length into a list of
 	/// integers with a different bit length.
@@ -165,6 +167,8 @@ public static class SerializationHelper {
 	}
 
 	public static List<byte[]> Unstitch(int magicNumber, byte[] input){
+		if (Debugging) Debug.Print("SerializationHelper: Unstitching with magic number " 
+		+ magicNumber + " and byte array of length " + input.Length);
 		int byteHead = 0;
 		int readMagic = ReadInt(input, ref byteHead);
 		if (readMagic != magicNumber){
@@ -172,8 +176,11 @@ public static class SerializationHelper {
 		}
 		List<byte[]> collection = new();
 		while (byteHead < input.Length){
+			if (Debugging) Debug.Print("SerializationHelper: Bytehead is: " + byteHead);
 			int bufferLength = ReadInt(input, ref byteHead);
+			if (Debugging) Debug.Print("SerializationHelper: Found buffer of length: " + bufferLength);
 			byte[] buffer = ReadBytes(input, bufferLength, ref byteHead);
+			if (Debugging) Debug.Print("SerializationHelper: Returning from read byteHead is: " + byteHead);
 			collection.Add(buffer);
 		}
 		return collection;

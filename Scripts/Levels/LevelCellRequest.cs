@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using LOM.Spaces;
 
 namespace LOM.Levels;
 
 public abstract class LevelCellRequest {
+    private static bool Debugging = true;
     private static int MagicNumber = 3;
     public enum RequestType {
         WorldCell = 1
@@ -47,6 +49,8 @@ public abstract class LevelCellRequest {
         byteHead++;
         RequestStatus readRequestStatus = (RequestStatus)bytes[byteHead];
         byteHead++;
+        if (Debugging) Debug.Print("LevelCellRequest: About to call FromBytes, byteHead is " + byteHead 
+        + " and bytes.Length is " + bytes.Length);
         byte[] remaining = SerializationHelper.ReadBytes(bytes, bytes.Length - byteHead, ref byteHead);
         if (readRequestType == RequestType.WorldCell){
             return WorldCellRequest.FromBytes(remaining);

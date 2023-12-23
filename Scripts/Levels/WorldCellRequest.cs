@@ -12,6 +12,16 @@ public class WorldCellRequest : LevelCellRequest {
         this.worldSpace = worldSpace;
     }
 
+    public override byte[] Serialize(){
+        byte[] header = base.Serialize();
+        byte[] payload = GetBytes();
+        byte[] output = new byte[header.Length + payload.Length];
+        int byteHead = 0;
+        SerializationHelper.AppendBytes(ref output, header, ref byteHead);
+        SerializationHelper.AppendBytes(ref output, payload, ref byteHead);
+        return output;
+    }
+
     protected override byte[] GetBytes(){
         List<byte[]> items;
         if (payload is not null){
@@ -36,7 +46,8 @@ public class WorldCellRequest : LevelCellRequest {
             throw new ArgumentException("WorldCellRequest: Unstitched list is " + items.Count + " elements long.");
         }
         WorldSpaceToken spaceToken = WorldSpaceToken.Deserialize(items[0]);
-        CellPosition cellCoords = (CellPosition)CellPosition.Deserialize(items[1]);
+        Position coords = Position.Deserialize(items[1]);
+        CellPosition cellCoords = new(coords.X, coords.Y);
         WorldCellRequest output = new(spaceToken, cellCoords);
         if (items.Count == 3){
             LevelCell loadedCell = LevelCell.Deserialize(items[2]);

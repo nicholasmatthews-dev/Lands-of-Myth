@@ -48,6 +48,9 @@ public partial class Main : Node2D
 		WorldCellRequest requestA = new(tokenA, new CellPosition(0, 0));
 		WorldCellRequest requestB  = new(tokenB, new CellPosition(0,0));
 		Debug.Print("Main: Requests are equal? " + (requestA == requestB));
+		byte[] serializedRequest = requestA.Serialize();
+		WorldCellRequest deserializedRequest = (WorldCellRequest)LevelCellRequest.Deserialize(serializedRequest);
+		Debug.Print("Main: Deserialized request is equal to original? " + (requestA == deserializedRequest));
 
         camera.Target = character;
 		gameModel.LevelManager.RegisterPostionUpdateSource(movement);

@@ -17,6 +17,7 @@ public partial class LevelCell
 	/// </summary>
 	public static int NumLayers = 3;
 
+	/*
 	/// <summary>
 	/// A <c>TileMap</c> representing the tiles contained in this cell.
 	/// </summary>
@@ -26,16 +27,22 @@ public partial class LevelCell
 	/// this <c>LevelCell</c> has checked out.
 	/// </summary>
 	private Dictionary<int, ITileSetTicket> tickets = new Dictionary<int, ITileSetTicket>();
+	*/
+
 	/// <summary>
 	/// A dictionary mapping between the atlas source id in the master <c>TileSet</c> and the
 	/// associated tileSetRef.
 	/// </summary>
 	private Dictionary<int, int> atlasCodesToRef = new Dictionary<int, int>();
+
+	/*
 	/// <summary>
 	/// A 2D array representing which coordinates are solid, <c>True</c> for solid and false
 	/// otherwise.
 	/// </summary>
 	private bool[,] Solid = new bool[Width, Height];
+	*/
+
 	/// <summary>
 	/// Represents the tiles in this <c>LevelCell</c> ordered as [X, Y, Layer]. Tiles are 
 	/// represented as codes given by the mapping in codesToTiles.
@@ -58,18 +65,11 @@ public partial class LevelCell
 	/// </summary>
 	public ConcurrentQueue<((Position, int), Tile)> tileUpdates = new();
 
+	/*
 	private TileSetManager tileSetManager;
+	*/
 
-	public LevelCell(TileSetManager tileSetManager){
-		this.tileSetManager = tileSetManager;
-		for (int i = 0; i < Width; i++){
-			for (int j = 0; j < Height; j++){
-				Solid[i,j] = false;
-				for (int k = 0; k < NumLayers; k++){
-					tiles[i,j,k] = 0;
-				}
-			}
-		}
+	public LevelCell(){
 	}
 
 	/// <summary>
@@ -84,41 +84,6 @@ public partial class LevelCell
 	}
 
 	/// <summary>
-	/// Updates the solid array by reading the data of the given cells.
-	/// </summary>
-	public void CheckSolid(){
-		for (int i=0; i < Width; i++){
-			for (int j=0; j < Height; j++){
-				for (int k=0; k < NumLayers; k++){
-					Tile cellData = GetTile(new Position(i, j), k);
-					if (cellData is null){
-						break;
-					}
-					Solid[i,j] = cellData.isSolid || Solid[i,j];
-				}
-			}
-		}
-	}
-
-	/// <summary>
-	/// Checks if a collection of tiles is a valid placement (doesn't collide with any
-	/// tiles marked solid).
-	/// </summary>
-	/// <param name="occupied">The collection of tiles to check collision for.</param>
-	/// <returns><c>True</c> if none of the tiles are solid, <c>False</c> otherwise.</returns>
-	public bool PositionValid(ICollection<Position> occupied){
-		bool valid = true;
-		foreach (Position position in occupied){
-			if (position.X >= 0 && position.X < Width){
-				if (position.Y >= 0 && position.Y < Height){
-					valid = valid && !Solid[position.X, position.Y];
-				}
-			}
-		}
-		return valid;
-	}
-
-	/// <summary>
 	/// Places a tile on this cell's tile map.
 	/// </summary>
 	/// <param name="layer">The layer to place the tile on.</param>
@@ -129,7 +94,6 @@ public partial class LevelCell
 		int code = GetTileAsCode(toPlace);
 		Tile permTile = codesToTiles[code];
 		tiles[coords.X, coords.Y, layer] = code;
-		Solid[coords.X,coords.Y] = Solid[coords.X, coords.Y] || permTile.isSolid;
 		tileUpdates.Enqueue(((coords, layer), permTile));
 	}
 
@@ -151,29 +115,12 @@ public partial class LevelCell
 	/// <param name="input">The tile to input</param>
 	/// <returns>The code associated with this tile.</returns>
 	public int GetTileAsCode(Tile input){
-		if (!tickets.ContainsKey(input.tileSetRef)){
-			AddTicket(input.tileSetRef);
-		}
 		if (!tileToCodes.ContainsKey(input)){
 			int code = tileToCodes.Count();
-			input.PopulateTileData(tileSetManager);
 			tileToCodes.Add(input, code);
 			codesToTiles.Add(code, input);
 		}
 		return tileToCodes[input];
-	}
-
-	/// <summary>
-	/// Requests a ticket for a given <c> tileSetRef </c> and then adds the ticket
-	/// to the list of active tickets. Additionally stores a dictionary entry to associate
-	/// the atlas id of the ticket with the given <c> tileSetRef </c> mainly used for
-	/// <see cref="GetTileIdentifier"/> 
-	/// </summary>
-	/// <param name="tileSetRef">The reference code for the desired tileset.</param>
-	private void AddTicket(int tileSetRef){
-		ITileSetTicket tileSetTicket = tileSetManager.GetTileSetTicket(tileSetRef);
-		tickets.Add(tileSetRef, tileSetTicket);
-		atlasCodesToRef.Add(tileSetTicket.GetAtlasId(), tileSetRef);
 	}
 
 	/// <summary>
@@ -207,8 +154,8 @@ public partial class LevelCell
 	/// <param name="input">The bytes which represent the <c>LevelCell</c></param>
 	/// <returns>A new instance of <c>LevelCell</c> which is a copy of the object 
 	/// previously serialized.</returns>
-	public static LevelCell Deserialize(byte[] input, TileSetManager tileSetManager){
-		LevelCell output = new LevelCell(tileSetManager);
+	public static LevelCell Deserialize(byte[] input){
+		LevelCell output = new LevelCell();
 		List<byte> bytes = new List<byte>(input);
 
 		(int, List<(int, List<Tile>)>) tileSetHeader = DecodeTileSourceHeader(bytes);
@@ -462,9 +409,5 @@ public partial class LevelCell
 			{Tile.EmptyTile, 0}
 		};
 		return tileCodes;
-	}
-
-	public int GetAtlasId(int tileSetRef){
-		return tickets[tileSetRef].GetAtlasId();
 	}
 }

@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace LOM.Levels;
@@ -18,6 +19,9 @@ public partial class LevelCellNode : Node2D {
     /// The TileMap which contains all the Tiles the LevelCell represents.
     /// </summary>
     private TileMap tileMap = new();
+
+    private Dictionary<int, ITileSetTicket> tileSetTickets = new();
+    private Dictionary<int, int> atlasCodes = new();
 
     private TileSetManager tileSetManager;
 
@@ -69,7 +73,7 @@ public partial class LevelCellNode : Node2D {
     /// <param name="coords">The coordinates of the tile to place.</param>
     /// <param name="tile">The tile to be placed.</param>
     private void Place(int layer, Position coords, Tile tile){
-        int sourceId = referenceCell.GetAtlasId(tile.tileSetRef);
+        int sourceId = GetAtlasId(tile);
         tileMap.SetCell
         (
             layer, 
@@ -77,6 +81,19 @@ public partial class LevelCellNode : Node2D {
             sourceId, 
             new Vector2I(tile.atlasX, tile.atlasY)
         );
+    }
+
+    private int GetAtlasId(Tile tile){
+        if (!tileSetTickets.ContainsKey(tile.tileSetRef)){
+            AddTileSetTicket(tile.tileSetRef);
+        }
+        return atlasCodes[tile.tileSetRef];
+    }
+
+    private void AddTileSetTicket(int tileSetRef){
+        ITileSetTicket ticket = tileSetManager.GetTileSetTicket(tileSetRef);
+        tileSetTickets.Add(tileSetRef, ticket);
+        atlasCodes.Add(tileSetRef, ticket.GetAtlasId());
     }
 
 }

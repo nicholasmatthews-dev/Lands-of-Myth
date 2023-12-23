@@ -37,10 +37,17 @@ public partial class Main : Node2D
             Name = "LevelManager"
         };
 
-		CreateClientServer();
+		/*CreateClientServer();
 		worldSpaceClient = new(client, gameModel.TileSetManager);
 		worldSpaceServer = new(server, gameModel.TileSetManager);
-		gameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));
+		gameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));*/
+
+		WorldSpaceToken tokenA = new("Overworld");
+		WorldSpaceToken tokenB = new("Overworld");
+		Debug.Print("Main: World space tokens are equal? " + (tokenA == tokenB));
+		WorldCellRequest requestA = new(tokenA, new CellPosition(0, 0));
+		WorldCellRequest requestB  = new(tokenB, new CellPosition(0,0));
+		Debug.Print("Main: Requests are equal? " + (requestA == requestB));
 
         camera.Target = character;
 		gameModel.LevelManager.RegisterPostionUpdateSource(movement);

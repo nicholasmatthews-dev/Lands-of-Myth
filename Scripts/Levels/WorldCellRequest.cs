@@ -7,11 +7,12 @@ namespace LOM.Levels;
 public class WorldCellRequest : LevelCellRequest {
     public static int MagicNumber = 5;
     private WorldSpaceToken worldSpace;
-    public WorldCellRequest(WorldSpaceToken worldSpace, CellPosition coords) : base(worldSpace, coords){
+    public WorldCellRequest(WorldSpaceToken worldSpace, CellPosition coords) 
+    : base(worldSpace, coords, RequestType.WorldCell){
         this.worldSpace = worldSpace;
     }
 
-    public byte[] Serialize(){
+    protected override byte[] GetBytes(){
         List<byte[]> items;
         if (payload is not null){
             items = new(){
@@ -29,16 +30,37 @@ public class WorldCellRequest : LevelCellRequest {
         return SerializationHelper.Stitch(MagicNumber, items);
     }
 
-    public static WorldCellRequest Deserialize(byte[] bytes){
+    public static WorldCellRequest FromBytes(byte[] bytes){
         List<byte[]> items = SerializationHelper.Unstitch(MagicNumber, bytes);
         if (items.Count < 2 || items.Count > 3){
             throw new ArgumentException("WorldCellRequest: Unstitched list is " + items.Count + " elements long.");
         }
         WorldSpaceToken spaceToken = WorldSpaceToken.Deserialize(items[0]);
         CellPosition cellCoords = (CellPosition)CellPosition.Deserialize(items[1]);
+        WorldCellRequest output = new(spaceToken, cellCoords);
         if (items.Count == 3){
-            LevelCell loadedCell = LevelCell.Deserialize()
+            LevelCell loadedCell = LevelCell.Deserialize(items[2]);
+            output.payload = loadedCell;
         }
+        return output;
+    }
+
+    public override bool Equals(object obj)
+    {
+        bool baseEquals = base.Equals(obj);
+        if (!baseEquals){
+            return false;
+        }
+        if (obj is not WorldCellRequest){
+            return false;
+        }
+        WorldCellRequest other = (WorldCellRequest)obj;
+        return other.worldSpace == worldSpace;
+    }
+
+    public override int GetHashCode()
+    {
+        return (coords, worldSpace).GetHashCode();
     }
 
 }

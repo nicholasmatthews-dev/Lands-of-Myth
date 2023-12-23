@@ -121,16 +121,15 @@ public partial class Movement : Node, IPositionUpdateSource
 		else if (Input.IsActionPressed("down")){
 			newDestinationCoord.Y += 1;
 		}
-		if (CheckCollision(newDestinationCoord)){
-			DestinationCoord = newDestinationCoord;
-			if (DestinationCoord != PositionCoord){
-				destinationReached = false;
-			}
-			Destination = new Vector2(DestinationCoord.X * TileWidth, DestinationCoord.Y * TileHeight)
-			- TopLeft;
+		DestinationCoord = newDestinationCoord;
+		if (DestinationCoord != PositionCoord){
+			destinationReached = false;
 		}
+		Destination = new Vector2(DestinationCoord.X * TileWidth, DestinationCoord.Y * TileHeight)
+		- TopLeft;
 	}
 
+	/*
 	private bool CheckCollision(Vector2I destinationPoint){
 		List<WorldPosition> occupied = new List<WorldPosition>();
 		for (int i = 0; i < Width; i++){
@@ -140,6 +139,7 @@ public partial class Movement : Node, IPositionUpdateSource
 		}
 		return ActiveLevel.PositionValid(occupied);
 	}
+	*/
 
 	/// <summary>
 	/// Handles the interpolation of movement between grid spaces.

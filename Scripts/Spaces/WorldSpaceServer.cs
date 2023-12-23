@@ -30,7 +30,7 @@ public class WorldSpaceServer : ENetPacketListener
 
     public WorldSpaceServer(ENetServer server, TileSetManager tileSetManager){
         this.tileSetManager = tileSetManager;
-        activeSpace = new(tileSetManager);
+        activeSpace = new("Overworld", tileSetManager);
         eNetServer = server;
         eNetServer.AddPacketListener(communicationChannel,this);
     }
@@ -48,7 +48,7 @@ public class WorldSpaceServer : ENetPacketListener
     /// <param name="peer">The peer which sent the packet.</param>
     private void DecodePacket(byte[] packet, ENetPacketPeer peer){
         try {
-            WorldCellRequest request = WorldCellRequest.Deserialize(packet);
+            WorldCellRequest request = (WorldCellRequest)LevelCellRequest.Deserialize(packet);
             if (Debugging) Debug.Print("WorldSpaceServer: Request received: " + request);
             RespondToRequest(request, peer);
         }
@@ -67,8 +67,8 @@ public class WorldSpaceServer : ENetPacketListener
         Task.Run(async () => {
                 Task<LevelCell> levelCell = activeSpace.GetLevelCell(request.coords);
                 await levelCell;
-                request.payload = levelCell.Result.Serialize();
-                request.status = WorldCellRequest.RequestStatus.Fulfilled;
+                request.payload = levelCell.Result;
+                request.requestStatus = LevelCellRequest.RequestStatus.Fulfilled;
                 byte[] packet = request.Serialize();
                 if (Debugging) Debug.Print("WorldSpaceServer: Responding to request: " + request);
                 if (Debugging) Debug.Print("WorldSpaceServer: Packet size is " + packet.Length);

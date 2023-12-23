@@ -55,7 +55,8 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
     /// <returns>A task which will retrieve the <c>LevelCell</c> at the given coordinates.</returns>
     private Task<LevelCell> CreateRetrievalTask(CellPosition cellCoords){
         return Task.Run(() => {
-            WorldCellRequest request = new WorldCellRequest(spaceName, cellCoords);
+            WorldSpaceToken worldSpaceToken = new WorldSpaceToken(spaceName);
+            WorldCellRequest request = new WorldCellRequest(worldSpaceToken, cellCoords);
             EventWaitHandle waitHandle = new(false, EventResetMode.AutoReset);
             requestHandles.TryAdd(cellCoords, (waitHandle, request));
             if (Debugging){
@@ -70,7 +71,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
             if (Debugging){
                 Debug.Print("WorldSpaceClient: New request is: " + updatedEntry.Item2);
             }
-            LevelCell output = LevelCell.Deserialize(updatedEntry.Item2.payload, tileSetManager);
+            LevelCell output = updatedEntry.Item2.payload;
             requestHandles.TryRemove(cellCoords, out updatedEntry);
             return output;
         });
@@ -81,7 +82,7 @@ public partial class WorldSpaceClient : Space, ENetPacketListener {
         if (Debugging) Debug.Print("WorldSpaceClient: Packet received.");
         WorldCellRequest request;
         try {
-            request = WorldCellRequest.Deserialize(packet);
+            request = (WorldCellRequest)LevelCellRequest.Deserialize(packet);
         }
         catch (Exception e){
             Debug.Print("WorldSpaceClient: Error in deserializing packet: " + e.Message);

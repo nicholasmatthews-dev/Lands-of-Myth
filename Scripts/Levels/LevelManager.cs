@@ -209,26 +209,4 @@ public partial class LevelManager : IPositionUpdateListener
 		levelCellUpdates.Enqueue((true, coords, null));
 	}
 
-	/// <summary>
-	/// Returns whether or not a position is able to be occupied, given a collection of
-	/// cooridinates representing the tiles to be occupied.
-	/// </summary>
-	/// <param name="occupied">The positions to check to see if they are valid.</param>
-	/// <returns>True if the full collection of positions are all unoccupied, false otherwise.</returns>
-	public bool PositionValid(ICollection<WorldPosition> occupied){
-		bool valid = true;
-		foreach (WorldPosition position in occupied){
-			(CellPosition, Position) coordsTuple = position.GetCellCoords(CellWidth, CellHeight);
-			Position localPosition = coordsTuple.Item2;
-			List<Position> toCheck = new List<Position>
-            {
-                localPosition
-            };
-			if (activeCells.ContainsKey(coordsTuple.Item1)){
-				valid = valid && activeCells[coordsTuple.Item1].PositionValid(toCheck);
-			}
-		}
-		return valid;
-	}
-
 }

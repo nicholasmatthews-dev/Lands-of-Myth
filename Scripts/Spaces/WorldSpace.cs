@@ -54,7 +54,7 @@ public partial class WorldSpace : Space {
         int bufferLength = (int)file.ReadInt64();
         byte[] buffer = file.ReadBuffer(bufferLength);
         file.Close();
-        return LevelCell.Deserialize(buffer, tileSetManager);
+        return LevelCell.Deserialize(buffer);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public partial class WorldSpace : Space {
     /// <returns>A newly generated <c>LevelCell</c> at the given coordinates.</returns>
     private LevelCell GenerateNewCell(CellPosition coords){
         int forestRefId = tileSetManager.GetTileSetCode("Forest");
-        LevelCell newCell = new LevelCell(tileSetManager);
+        LevelCell newCell = new LevelCell();
         Tile fill;
         if ((coords.X + coords.Y) % 2 == 0){
             fill = new(forestRefId, 0, 0);

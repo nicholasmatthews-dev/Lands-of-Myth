@@ -6,6 +6,7 @@ using System;
 using LOM.Multiplayer;
 using System.Threading;
 using System.Diagnostics;
+using LOM.Game;
 
 public partial class Main : Node2D
 {
@@ -14,6 +15,7 @@ public partial class Main : Node2D
 	private Node2D character;
 	private LevelManagerNode levelManager;
 	public GameModel gameModel = new();
+	public Player player = new();
 	public static World world = new World("New World");
 	public WorldSpaceClient worldSpaceClient;
 	public WorldSpaceServer worldSpaceServer;
@@ -32,7 +34,7 @@ public partial class Main : Node2D
 		character = (Node2D)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/00dummy.tscn")
 		.Instantiate();
-        levelManager = new LevelManagerNode(gameModel.LevelManager, gameModel.TileSetManager)
+        levelManager = new LevelManagerNode(player.LevelManager, gameModel.TileSetManager)
         {
             Name = "LevelManager"
         };
@@ -53,9 +55,11 @@ public partial class Main : Node2D
 		Debug.Print("Main: Deserialized request is equal to original? " + (requestA == deserializedRequest));
 
         camera.Target = character;
-		gameModel.LevelManager.RegisterPostionUpdateSource(movement);
+		player.LevelManager.ConnectLevelHost(gameModel.LevelHost);
+		player.LevelManager.RegisterPostionUpdateSource(movement);
+		player.LevelManager.ChangeActiveSpace(tokenA, new CellPosition(0,0));
 		movement.Target = character;
-		movement.ActiveLevel = gameModel.LevelManager;
+		movement.ActiveLevel = player.LevelManager;
 		
 		//AddChild(gameModel.TileSetManager);
 		AddChild(levelManager);

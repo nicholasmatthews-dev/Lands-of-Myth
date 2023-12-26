@@ -44,6 +44,9 @@ public class Tile{
         }
     }
 
+    public static bool operator ==(Tile a, Tile b) => a.Equals(b);
+    public static bool operator !=(Tile a, Tile b) => !a.Equals(b);
+
     /// <summary>
     /// Populates the custom data associated with this Tile from the TileSet resource. This may be slow,
     /// so this function is not included in the constructor.

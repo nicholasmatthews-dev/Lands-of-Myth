@@ -74,4 +74,22 @@ public class WorldCellRequest : LevelCellRequest {
         return (coords, worldSpace).GetHashCode();
     }
 
+    public override string ToString()
+    {
+        if (payload is not null){
+            return "(WorldCellRequest: SpaceName: " + worldSpace.spaceName 
+            + "; Coords: " + coords 
+            + "; Status: " + requestStatus
+            + "; Payload: " + payload
+            + ")";
+        }
+        else {
+            return "(WorldCellRequest: SpaceName: " + worldSpace.spaceName 
+            + "; Coords: " + coords 
+            + "; Status: " + requestStatus
+            + ")";
+        }
+        
+    }
+
 }

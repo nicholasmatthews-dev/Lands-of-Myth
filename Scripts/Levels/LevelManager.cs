@@ -13,7 +13,7 @@ namespace LOM.Levels;
 /// Represents a manager which is responsible for retrieving the appropriate
 /// <c>LevelCells</c> from its active <c>Space</c>.
 /// </summary>
-public partial class LevelManager : IPositionUpdateListener
+public partial class LevelManager : IPositionUpdateListener, ILevelManager
 {
 	private static bool Debugging = false;
 	/// <summary>
@@ -39,7 +39,18 @@ public partial class LevelManager : IPositionUpdateListener
 	/// <summary>
 	/// The currently active space that this LevelManager is representing.
 	/// </summary>
-	private Space activeSpace;
+	//private Space activeSpace;
+
+	/// <summary>
+	/// The <see cref="SpaceToken"/> for the currently active space.
+	/// </summary>
+	private SpaceToken spaceToken;
+
+	/// <summary>
+	/// The <see cref="ILevelHost"/> that this <see cref="LevelManager"/> will draw its
+	/// <see cref="LevelCell"/>s from. 
+	/// </summary>
+	private ILevelHost levelHost;
 
 	/// <summary>
 	/// The last center (in cell coordinates) for the LevelManager's loaded cells.
@@ -127,9 +138,10 @@ public partial class LevelManager : IPositionUpdateListener
 	/// </summary>
 	/// <param name="newSpace">The <c>Space</c> to switch to.</param>
 	/// <param name="newPosition">The center (in cell coordinates) for this <c>LevelManager</c>.</param>
-	public void ChangeActiveSpace(Space newSpace, CellPosition newPosition){
-		if (Debugging) Debug.Print("LevelManager: Change active space called around " + newPosition);
-		activeSpace = newSpace;
+	public void ChangeActiveSpace(SpaceToken newSpace, CellPosition newPosition){
+		if (Debugging) Debug.Print("LevelManager: Change active space called from " 
+		+ newSpace + " around " + newPosition);
+		spaceToken = newSpace;
 		lastPosition = newPosition;
 		ChangeLoadedCells(lastPosition);
 	}
@@ -177,10 +189,15 @@ public partial class LevelManager : IPositionUpdateListener
 		if (!activeCells.ContainsKey(coords)){
 			Task.Run(() => {
 				if (Debugging) Debug.Print("LevelManager: Attemtping to get cell at " + coords);
-				Task<LevelCell> loadTask = activeSpace.GetLevelCell(coords);
+				LevelCellRequest request = null;
+				if (spaceToken is WorldSpaceToken){
+					request = new WorldCellRequest((WorldSpaceToken)spaceToken, coords);
+				}
+				Task<LevelCellRequest> loadTask = levelHost.GetLevelCell(request);
 				loadTask.Wait();
-				LevelCell loaded = loadTask.Result;
-				AddActiveCell(coords, loaded);
+				request = loadTask.Result;
+				//Debug.Print("LevelManager: Returned result is " + request);
+				AddActiveCell(coords, request.payload);
 				loadTask.Dispose();
 			});
 		}
@@ -194,7 +211,10 @@ public partial class LevelManager : IPositionUpdateListener
 	/// <param name="levelCell">The LevelCell to be loaded.</param>
 	private void AddActiveCell(CellPosition coords, LevelCell levelCell){
 		if (Debugging) Debug.Print("LevelManager: Adding cell at " + coords);
-		activeCells.TryAdd(coords, levelCell);
+		bool success = activeCells.TryAdd(coords, levelCell);
+		if (!success){
+			if (Debugging) Debug.Print("LevelManager: Cell was not successfully added.");
+		}
 		levelCellUpdates.Enqueue((false, coords, levelCell));
 	}
 
@@ -204,9 +224,19 @@ public partial class LevelManager : IPositionUpdateListener
 	/// <param name="coords">The coordinates of the cell to unload.</param>
 	private void DisposeOfCell(CellPosition coords){
 		if (Debugging) Debug.Print("LevelManager: Removing cell at " + coords);
-		activeSpace.StoreBytesToCell(activeCells[coords].Serialize(), coords);
         activeCells.Remove(coords, out _);
 		levelCellUpdates.Enqueue((true, coords, null));
 	}
 
+    public void ConnectLevelHost(ILevelHost levelHost)
+    {
+        this.levelHost = levelHost;
+		levelHost.ConnectManager(this);
+    }
+
+    public void DisconnectLevelHost(ILevelHost levelHost)
+    {
+        this.levelHost = null;
+		levelHost.DisconnectManager(this);
+    }
 }

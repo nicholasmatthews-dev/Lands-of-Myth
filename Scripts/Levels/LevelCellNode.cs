@@ -6,6 +6,7 @@ using System.Diagnostics;
 namespace LOM.Levels;
 
 public partial class LevelCellNode : Node2D {
+    private static bool Debugging = false;
     /// <summary>
     /// The <c>LevelCell</c> that this Node references and represents.
     /// </summary>
@@ -23,6 +24,8 @@ public partial class LevelCellNode : Node2D {
     private Dictionary<int, ITileSetTicket> tileSetTickets = new();
     private Dictionary<int, int> atlasCodes = new();
 
+    private Queue<(Position, int)> invalidTileQueue = new();
+
     private TileSetManager tileSetManager;
 
     public LevelCellNode(LevelCell referenceCell, TileSetManager tileSetManager) : base(){
@@ -34,12 +37,46 @@ public partial class LevelCellNode : Node2D {
         tileMap.TileSet = tileSetManager.GetDefaultTileSet();
         tileMap.AddLayer(-1);
         tileMap.AddLayer(-1);
+        InvalidateAllTiles();
         AddChild(tileMap);
     }
 
     public override void _Process(double delta)
     {
-        PlaceQueuedTiles();        
+        //PlaceQueuedTiles(); 
+        GetInvalidTiles();       
+    }
+
+    /// <summary>
+    /// Invalidates all the tiles in this <see cref="LevelCell"/> and adds them
+    /// to the invalid tile queue for retrieval.
+    /// </summary>
+    private void InvalidateAllTiles(){
+        for (int i = 0; i < LevelManager.CellWidth; i++){
+            for (int j = 0; j < LevelManager.CellHeight; j++){
+                for (int k = 0; k < LevelCell.NumLayers; k++){
+                    invalidTileQueue.Enqueue((new Position(i,j), k));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Attempts to load in all tiles that have been marked invalid and are in the 
+    /// invalid tile queue. This is limited by the number of tiles that can be loaded
+    /// per frame.
+    /// </summary>
+    private void GetInvalidTiles() {
+        int tilesLoaded = 0;
+        while (tilesLoaded <= tilesPerFrame){
+            if (invalidTileQueue.Count <= 0){
+                break;
+            }
+            (Position, int) coords = invalidTileQueue.Dequeue();
+            Tile toPlace = referenceCell.GetTile(coords.Item1, coords.Item2);
+            Place(coords.Item2, coords.Item1, toPlace);
+            tilesLoaded++;
+        }
     }
 
     /// <summary>
@@ -73,6 +110,9 @@ public partial class LevelCellNode : Node2D {
     /// <param name="coords">The coordinates of the tile to place.</param>
     /// <param name="tile">The tile to be placed.</param>
     private void Place(int layer, Position coords, Tile tile){
+        if (tile == Tile.EmptyTile){
+            return;
+        }
         int sourceId = GetAtlasId(tile);
         tileMap.SetCell
         (

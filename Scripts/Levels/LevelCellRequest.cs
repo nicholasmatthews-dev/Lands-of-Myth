@@ -5,7 +5,7 @@ using LOM.Spaces;
 namespace LOM.Levels;
 
 public abstract class LevelCellRequest {
-    private static bool Debugging = true;
+    private static bool Debugging = false;
     private static int MagicNumber = 3;
     public enum RequestType {
         WorldCell = 1

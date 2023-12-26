@@ -79,7 +79,7 @@ public partial class LevelCell
 	/// <param name="coords"></param>
 	/// <param name="layer"></param>
 	/// <returns></returns>
-	private Tile GetTile(Position coords, int layer){
+	public Tile GetTile(Position coords, int layer){
 		return codesToTiles[tiles[coords.X, coords.Y, layer]];
 	}
 
@@ -410,4 +410,9 @@ public partial class LevelCell
 		};
 		return tileCodes;
 	}
+
+    public override string ToString()
+    {
+        return "(LevelCell: UniqueTiles: " + tileToCodes.Count + ")";
+    }
 }

@@ -6,6 +6,7 @@ using System.Diagnostics;
 namespace LOM.Levels;
 
 public partial class LevelManagerNode : Node2D {
+    private static bool Debugging = false;
     /// <summary>
     /// The <c>LevelManager</c> that this Node references and represents.
     /// </summary>
@@ -59,7 +60,9 @@ public partial class LevelManagerNode : Node2D {
     /// </summary>
     /// <param name="coords">The coordinates in cell space of the LevelCell to remove.</param>
     private void RemoveCell(CellPosition coords){
+        if (Debugging) Debug.Print("LMNode: Removing cell at position " + coords);
         if (!activeNodes.ContainsKey(coords)){
+            if (Debugging) Debug.Print("LMNode: Cell not contained in active nodes.");
             return;
         }
         LevelCellNode toRemove = activeNodes[coords];
@@ -75,6 +78,7 @@ public partial class LevelManagerNode : Node2D {
     /// <param name="coords">The coordinates of the cell to add in cell space.</param>
     /// <param name="toAdd">The LevelCell to be added.</param>
     private void AddCell(CellPosition coords, LevelCell toAdd){
+        if (Debugging) Debug.Print("LMNode: Adding cell " + toAdd + " at position " + coords);
         LevelCellNode newNode = new(toAdd, tileSetManager)
         {
             Position = new Vector2
@@ -84,6 +88,12 @@ public partial class LevelManagerNode : Node2D {
         ),
             Name = "LevelCell(" + coords.X + "," + coords.Y + ")"
         };
+        if (Debugging){
+            Node findChild = FindChild(newNode.Name);
+            if (findChild is not null){
+                Debug.Print("LMNode: Child with name " + newNode.Name + " already exists."); 
+            }
+        }
         AddChild(newNode);
         activeNodes.Add(coords, newNode);
     }

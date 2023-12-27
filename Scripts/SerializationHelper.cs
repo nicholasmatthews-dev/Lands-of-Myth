@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 
 public static class SerializationHelper {
-	private static bool Debugging = true;
+	private static bool Debugging = false;
 	/// <summary>
 	/// Converts a list of integers with specified bit length into a list of
 	/// integers with a different bit length.

@@ -17,8 +17,7 @@ public partial class Main : Node2D
 	public GameModel gameModel = new();
 	public Player player = new();
 	public static World world = new World("New World");
-	public WorldSpaceClient worldSpaceClient;
-	public WorldSpaceServer worldSpaceServer;
+	public LevelManagerServer managerServer;
 	ENetServer server;
 	ENetClient client;
 	// Called when the node enters the scene tree for the first time.
@@ -39,23 +38,16 @@ public partial class Main : Node2D
             Name = "LevelManager"
         };
 
-		/*CreateClientServer();
-		worldSpaceClient = new(client, gameModel.TileSetManager);
-		worldSpaceServer = new(server, gameModel.TileSetManager);
-		gameModel.ChangeActiveSpace(worldSpaceClient, new Vector2I(0,0));*/
+		CreateClientServer();
+		LevelHostClient hostClient = new(client);
+		managerServer = new(server);
+		managerServer.ConnectLevelHost(gameModel.LevelHost);
 
 		WorldSpaceToken tokenA = new("Overworld");
-		WorldSpaceToken tokenB = new("Overworld");
-		Debug.Print("Main: World space tokens are equal? " + (tokenA == tokenB));
-		WorldCellRequest requestA = new(tokenA, new CellPosition(0, 0));
-		WorldCellRequest requestB  = new(tokenB, new CellPosition(0,0));
-		Debug.Print("Main: Requests are equal? " + (requestA == requestB));
-		byte[] serializedRequest = requestA.Serialize();
-		WorldCellRequest deserializedRequest = (WorldCellRequest)LevelCellRequest.Deserialize(serializedRequest);
-		Debug.Print("Main: Deserialized request is equal to original? " + (requestA == deserializedRequest));
+
 
         camera.Target = character;
-		player.LevelManager.ConnectLevelHost(gameModel.LevelHost);
+		player.LevelManager.ConnectLevelHost(hostClient);
 		player.LevelManager.RegisterPostionUpdateSource(movement);
 		player.LevelManager.ChangeActiveSpace(tokenA, new CellPosition(0,0));
 		movement.Target = character;

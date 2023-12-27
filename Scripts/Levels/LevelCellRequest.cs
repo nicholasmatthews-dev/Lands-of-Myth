@@ -80,7 +80,6 @@ public abstract class LevelCellRequest {
         equal = equal && (other.coords == coords);
         equal = equal && (other.requestType == requestType);
         equal = equal && (other.requestSpace == requestSpace);
-        equal = equal && (other.requestStatus == requestStatus);
         return equal;
     }
 

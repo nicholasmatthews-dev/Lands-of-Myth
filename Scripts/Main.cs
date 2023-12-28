@@ -14,15 +14,15 @@ public partial class Main : Node2D
 	public static Movement movement;
 	private Node2D character;
 	private LevelManagerNode levelManager;
-	public GameModel gameModel = new();
-	public Player player = new();
 	public static World world = new World("New World");
-	public LevelManagerServer managerServer;
-	ENetServer server;
-	ENetClient client;
+	public LevelManagerClient managerServer;
+	GameServer server;
+	GameClient client;
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		CreateClientServer();
+
 		//tileSetManager = new TileSetManager();
 		camera = (CameraFollow)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/camera_follow.tscn")
@@ -33,25 +33,15 @@ public partial class Main : Node2D
 		character = (Node2D)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/00dummy.tscn")
 		.Instantiate();
-        levelManager = new LevelManagerNode(player.LevelManager, gameModel.TileSetManager)
+        levelManager = new LevelManagerNode(client.Player.LevelManager, client.TileSetManager)
         {
             Name = "LevelManager"
         };
 
-		CreateClientServer();
-		LevelHostClient hostClient = new(client);
-		managerServer = new(server);
-		managerServer.ConnectLevelHost(gameModel.LevelHost);
-
-		WorldSpaceToken tokenA = new("Overworld");
-
-
         camera.Target = character;
-		player.LevelManager.ConnectLevelHost(hostClient);
-		player.LevelManager.RegisterPostionUpdateSource(movement);
-		player.LevelManager.ChangeActiveSpace(tokenA, new CellPosition(0,0));
 		movement.Target = character;
-		movement.ActiveLevel = player.LevelManager;
+		movement.ActiveLevel = client.Player.LevelManager;
+		movement.AddPositionUpdateListener(client.Player.LevelManager);
 		
 		//AddChild(gameModel.TileSetManager);
 		AddChild(levelManager);

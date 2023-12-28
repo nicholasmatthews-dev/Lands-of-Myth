@@ -5,7 +5,7 @@ namespace LOM.Multiplayer;
 /// <summary>
 /// Represents a listener which can retrieve ENetPackets.
 /// </summary>
-public interface ENetPacketListener {
+public interface IENetPacketListener {
     /// <summary>
     /// Represents the action that this ENetPacketListener will take when a packet
     /// is received. The packet and the associated peer are passed as parameters.

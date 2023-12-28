@@ -33,6 +33,7 @@ public partial class ENetClient : ENetService {
         if (eventType == ENetConnection.EventType.Connect){
             Debug.Print("ENetClient: Connection established with " + peer.GetRemoteAddress());
             serverPeer = peer;
+            BroadCastConnection(peer);
             connectionWait.Set();
         }
         if (eventType == ENetConnection.EventType.Receive){

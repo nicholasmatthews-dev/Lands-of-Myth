@@ -24,7 +24,7 @@ public partial class ENetServer : ENetService{
             if (Debugging) Debug.Print("ENetServer: Received event with type " + eventType + " on channel " + channel + " from " + peer.GetRemoteAddress());
         }
         if (eventType == ENetConnection.EventType.Connect){
-            peer?.Send(0, Encoding.ASCII.GetBytes("Hello!"), (int)ENetPacketPeer.FlagReliable);
+            BroadCastConnection(peer);
         }
         if (eventType == ENetConnection.EventType.Receive){
             if (Debugging) Debug.Print("ENetServer: Event type was received.");

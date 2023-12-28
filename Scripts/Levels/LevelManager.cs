@@ -15,7 +15,7 @@ namespace LOM.Levels;
 /// </summary>
 public partial class LevelManager : IPositionUpdateListener, ILevelManager
 {
-	private static bool Debugging = false;
+	private static bool Debugging = true;
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>

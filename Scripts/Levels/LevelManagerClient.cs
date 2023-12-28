@@ -5,14 +5,16 @@ using LOM.Multiplayer;
 
 namespace LOM.Levels;
 
-public class LevelManagerServer : ILevelManager, ENetPacketListener
+public class LevelManagerClient : ILevelManager, IENetPacketListener
 {
     private static bool Debugging = true;
     private ILevelHost levelHost;
     private ENetServer eNetServer;
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
+    private ENetPacketPeer associatedPeer;
 
-    public LevelManagerServer(ENetServer eNetServer){
+    public LevelManagerClient(ENetServer eNetServer, ENetPacketPeer associatedPeer){
+        this.associatedPeer = associatedPeer;
         this.eNetServer = eNetServer;
         eNetServer.AddPacketListener(communicationChannel, this);
     }
@@ -31,7 +33,7 @@ public class LevelManagerServer : ILevelManager, ENetPacketListener
 
     private void HandlePacket(byte[] packet, ENetPacketPeer peer){
         LevelCellRequest request = LevelCellRequest.Deserialize(packet);
-        if (Debugging) Debug.Print("LevelManagerServer: Received request " + request);
+        if (Debugging) Debug.Print("LevelManagerClient: Received request " + request);
         RespondToRequest(request, peer);
     }
 
@@ -40,7 +42,7 @@ public class LevelManagerServer : ILevelManager, ENetPacketListener
             Task<LevelCellRequest> requestTask = levelHost.GetLevelCell(request);
             requestTask.Wait();
             LevelCellRequest fulfilledRequest = requestTask.Result;
-            if (Debugging) Debug.Print("LevelManagerServer: Responding to request with " + fulfilledRequest);
+            if (Debugging) Debug.Print("LevelManagerClient: Responding to request with " + fulfilledRequest);
             byte[] packet = fulfilledRequest.Serialize();
             peer.Send(communicationChannel, packet, (int)ENetPacketPeer.FlagReliable);
         });
@@ -48,6 +50,11 @@ public class LevelManagerServer : ILevelManager, ENetPacketListener
 
     public void ReceivePacket(byte[] packet, ENetPacketPeer peer)
     {
-        HandlePacket(packet, peer);
+        if (Debugging) Debug.Print("LevelManagerClient: Received packet of length " + packet.Length 
+        + " from " + peer);
+        if (associatedPeer.Equals(peer)){
+            if (Debugging) Debug.Print("LevelManagerClient: Received request from appropriate peer.");
+            HandlePacket(packet, peer);
+        }
     }
 }

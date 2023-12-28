@@ -7,7 +7,7 @@ using LOM.Multiplayer;
 
 namespace LOM.Levels;
 
-public class LevelHostClient : ILevelHost, ENetPacketListener
+public class LevelHostServer : ILevelHost, IENetPacketListener
 {
     private static bool Debugging = true;
     private ENetClient eNetClient;
@@ -15,7 +15,7 @@ public class LevelHostClient : ILevelHost, ENetPacketListener
     private ConcurrentDictionary<LevelCellRequest, Task<LevelCellRequest>> activeTasks = new();
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
 
-    public LevelHostClient(ENetClient eNetClient){
+    public LevelHostServer(ENetClient eNetClient){
         this.eNetClient = eNetClient;
         eNetClient.AddPacketListener(communicationChannel, this);
     }

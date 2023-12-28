@@ -27,7 +27,15 @@ public abstract partial class ENetService : RefCounted {
     /// <summary>
     /// The <c>ENetPacketListeners</c> which will use this service.
     /// </summary>
-    protected ConcurrentDictionary<int, HashSet<WeakReference<ENetPacketListener>>> packetListeners = new();
+    protected ConcurrentDictionary<int, HashSet<WeakReference<IENetPacketListener>>> packetListeners = new();
+    /// <summary>
+    /// A lock for accessing <see cref="connectionListeners"/> 
+    /// </summary>
+    protected object connectionListenersLock = new();
+    /// <summary>
+    /// A collection of all the <see cref="IENetConnectionListener"/>s that this service has subscribed. 
+    /// </summary>
+    protected HashSet<WeakReference<IENetConnectionListener>> connectionListeners = new();
     /// <summary>
     /// How long service calls will wait before timing out, in milliseconds.
     /// </summary>
@@ -74,7 +82,7 @@ public abstract partial class ENetService : RefCounted {
     }
 
     /// <summary>
-    /// Broadcasts a received message to all available <see cref="ENetPacketListener"/>s.
+    /// Broadcasts a received message to all available <see cref="IENetPacketListener"/>s.
     /// </summary>
     /// <param name="channel">The channel to broadcast on.</param>
     /// <param name="peer">The peer which sent the received message.</param>
@@ -84,9 +92,9 @@ public abstract partial class ENetService : RefCounted {
             if (Debugging) Debug.Print(GetType() + ": No listener on channel " + channel);
             return;
         }
-        List<WeakReference<ENetPacketListener>> deadReferences = new();
-        foreach (WeakReference<ENetPacketListener> reference in packetListeners[channel]){
-            if (reference.TryGetTarget(out ENetPacketListener listener)){
+        List<WeakReference<IENetPacketListener>> deadReferences = new();
+        foreach (WeakReference<IENetPacketListener> reference in packetListeners[channel]){
+            if (reference.TryGetTarget(out IENetPacketListener listener)){
                 if (Debugging) Debug.Print(GetType() + ": Sending packet of length " + packet.Length + " to listener.");
                 listener.ReceivePacket(packet, peer);
             }
@@ -95,24 +103,47 @@ public abstract partial class ENetService : RefCounted {
                 deadReferences.Add(reference);
             }
         }
-        foreach(WeakReference<ENetPacketListener> reference in deadReferences){
+        foreach(WeakReference<IENetPacketListener> reference in deadReferences){
             packetListeners[channel].Remove(reference);
         }
     }
 
     /// <summary>
-    /// Adds a new <see cref="ENetPacketListener"/> on the given channel.
+    /// Broadcasts a connection event to all <see cref="IENetConnectionListener"/>s. 
+    /// </summary>
+    /// <param name="connectedPeer">The peer which connected.</param>
+    protected void BroadCastConnection(ENetPacketPeer connectedPeer){
+        if (Debugging) Debug.Print(GetType() + ": Broadcasting connection event to listeners.");
+        List<WeakReference<IENetConnectionListener>> deadReferences = new();
+        lock (connectionListenersLock){
+            foreach (WeakReference<IENetConnectionListener> reference in connectionListeners){
+                if (reference.TryGetTarget(out IENetConnectionListener listener)){
+                    listener.HandleConnection(connectedPeer);
+                }
+                else {
+                    if (Debugging) Debug.Print(GetType() + ": Found dead connection listener.");
+                    deadReferences.Add(reference);
+                }
+            }
+            foreach (WeakReference<IENetConnectionListener> deadReference in deadReferences){
+                connectionListeners.Remove(deadReference);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds a new <see cref="IENetPacketListener"/> on the given channel.
     /// <para>
     /// NOTE: Listeners are stored as <see cref="WeakReference"/>s and as such this object
     /// cannot be relied on to keep them alive.
     /// </summary>
     /// <param name="channel">The channel to listen on.</param>
     /// <param name="listener">The listener to be added.</param>
-    public void AddPacketListener(int channel, ENetPacketListener listener){
+    public void AddPacketListener(int channel, IENetPacketListener listener){
         if (Debugging) Debug.Print(GetType() + ": Attempting to add listener on channel " + channel);
-        WeakReference<ENetPacketListener> reference = new(listener);
+        WeakReference<IENetPacketListener> reference = new(listener);
         if (!packetListeners.ContainsKey(channel)){
-            HashSet<WeakReference<ENetPacketListener>> listenerSet = new()
+            HashSet<WeakReference<IENetPacketListener>> listenerSet = new()
             {
                 reference
             };
@@ -120,6 +151,20 @@ public abstract partial class ENetService : RefCounted {
         }
         else{
             packetListeners[channel].Add(reference);
+        }
+    }
+
+    /// <summary>
+    /// Adds a connection listener to listen to connection events.
+    /// </summary>
+    /// <param name="listener"></param>
+    public void AddConnectionListener(IENetConnectionListener listener){
+        if (Debugging) Debug.Print(GetType() + ": Attempting to add connection listener.");
+        WeakReference<IENetConnectionListener> reference = new(listener);
+        lock (connectionListenersLock){
+            if (!connectionListeners.Contains(reference)){
+                connectionListeners.Add(reference);
+            }
         }
     }
 

@@ -94,8 +94,10 @@ public partial class LevelManagerNode : Node2D {
                 Debug.Print("LMNode: Child with name " + newNode.Name + " already exists."); 
             }
         }
-        AddChild(newNode);
-        activeNodes.Add(coords, newNode);
+        if (!activeNodes.ContainsKey(coords)){
+            AddChild(newNode);
+            activeNodes.Add(coords, newNode);
+        }
     }
 
 }

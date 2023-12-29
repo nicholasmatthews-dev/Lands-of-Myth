@@ -45,6 +45,8 @@ public abstract partial class ENetService : RefCounted {
     /// </summary>
     protected bool keepAlive = true;
 
+    private ConcurrentQueue<(int, ENetPacketPeer, byte[])> outgoingMessages = new();
+
     /// <summary>
     /// Sets the compression mode for communication and initializes the service thread.
     /// <para>
@@ -72,6 +74,7 @@ public abstract partial class ENetService : RefCounted {
             try{
                 Godot.Collections.Array results = connection.Service(timeOutMillis);
                 HandleResults(results);
+                SendQueuedMessage();
             }
             catch (Exception e){
                 Debug.Print(GetType() + ": Error in process " + e.Message);
@@ -192,5 +195,23 @@ public abstract partial class ENetService : RefCounted {
             _Disposed = true;
             base.Dispose(disposing);
         }
+    }
+
+    public void QueueMessage(int channel, ENetPacketPeer peer, byte[] message){
+        outgoingMessages.Enqueue((channel, peer, message));
+    }
+
+    private void SendQueuedMessage(){
+        while (true){
+            if (outgoingMessages.TryDequeue(out (int, ENetPacketPeer, byte[]) entry)){
+                if (Debugging) Debug.Print(GetType() + ": Sending queued message on channel " + entry.Item1
+                + " to " + entry.Item2.GetRemoteAddress());
+                entry.Item2.Send(entry.Item1, entry.Item3, (int)ENetPacketPeer.FlagReliable);
+            }
+            else {
+                break;
+            }
+        }
+        
     }
 }

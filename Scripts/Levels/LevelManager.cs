@@ -15,7 +15,7 @@ namespace LOM.Levels;
 /// </summary>
 public partial class LevelManager : IPositionUpdateListener, ILevelManager
 {
-	private static bool Debugging = true;
+	private static bool Debugging = false;
 	/// <summary>
 	/// The height of a single tile in the tileset (in pixels).
 	/// </summary>
@@ -187,16 +187,15 @@ public partial class LevelManager : IPositionUpdateListener, ILevelManager
 	/// <param name="coords">The coordinates of the LevelCell to be loaded.</param>
 	private void LoadLevelCellFromSpace(CellPosition coords){
 		if (!activeCells.ContainsKey(coords)){
-			Task.Run(() => {
+			Task.Run(async () => {
 				if (Debugging) Debug.Print("LevelManager: Attemtping to get cell at " + coords);
 				LevelCellRequest request = null;
 				if (spaceToken is WorldSpaceToken){
 					request = new WorldCellRequest((WorldSpaceToken)spaceToken, coords);
 				}
 				Task<LevelCellRequest> loadTask = levelHost.GetLevelCell(request);
-				loadTask.Wait();
-				request = loadTask.Result;
-				//Debug.Print("LevelManager: Returned result is " + request);
+				request = await loadTask;
+				if (Debugging) Debug.Print("LevelManager: Returned result is " + request);
 				AddActiveCell(coords, request.payload);
 				loadTask.Dispose();
 			});

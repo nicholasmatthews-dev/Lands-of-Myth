@@ -7,7 +7,7 @@ namespace LOM.Levels;
 
 public class LevelManagerClient : ILevelManager, IENetPacketListener
 {
-    private static bool Debugging = true;
+    private static bool Debugging = false;
     private ILevelHost levelHost;
     private ENetServer eNetServer;
     private int communicationChannel = (int)ENetCommon.ChannelNames.Spaces;
@@ -38,13 +38,12 @@ public class LevelManagerClient : ILevelManager, IENetPacketListener
     }
 
     private void RespondToRequest(LevelCellRequest request, ENetPacketPeer peer){
-        Task.Run(() => {
+        Task.Run(async () => {
             Task<LevelCellRequest> requestTask = levelHost.GetLevelCell(request);
-            requestTask.Wait();
-            LevelCellRequest fulfilledRequest = requestTask.Result;
+            LevelCellRequest fulfilledRequest = await requestTask;
             if (Debugging) Debug.Print("LevelManagerClient: Responding to request with " + fulfilledRequest);
             byte[] packet = fulfilledRequest.Serialize();
-            peer.Send(communicationChannel, packet, (int)ENetPacketPeer.FlagReliable);
+            eNetServer.QueueMessage(communicationChannel, peer, packet);
         });
     }
 

@@ -6,6 +6,7 @@ using LOM.Levels;
 
 namespace LOM.Control;
 
+[GlobalClass]
 public partial class Movement : Node, IPositionUpdateSource
 {
 	/// <summary>

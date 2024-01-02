@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3 uid="uid://dfxfis7w0jijh"]
+
+[ext_resource type="PackedScene" uid="uid://cfc33krhtedj4" path="res://Scenes/Characters/00dummy.tscn" id="1_j8hvu"]
+[ext_resource type="Script" path="res://Scripts/Game/GameScene.cs" id="1_oex3i"]
+[ext_resource type="PackedScene" uid="uid://blew0orcbbyn3" path="res://Scenes/Characters/camera_follow.tscn" id="2_xnk00"]
+[ext_resource type="PackedScene" uid="uid://5tsagq143rpe" path="res://Scenes/Characters/movement.tscn" id="3_0tfpk"]
+
+[node name="game_scene" type="Node2D" node_paths=PackedStringArray("Movement", "CameraFollow")]
+script = ExtResource("1_oex3i")
+Movement = NodePath("Movement")
+CameraFollow = NodePath("Camera Follow")
+
+[node name="Node2D" parent="." instance=ExtResource("1_j8hvu")]
+
+[node name="Camera Follow" parent="." node_paths=PackedStringArray("Target") instance=ExtResource("2_xnk00")]
+Target = NodePath("../Node2D")
+
+[node name="Movement" parent="." node_paths=PackedStringArray("Target") instance=ExtResource("3_0tfpk")]
+Target = NodePath("../Node2D")

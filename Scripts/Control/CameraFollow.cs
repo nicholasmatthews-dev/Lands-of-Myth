@@ -3,6 +3,8 @@ using System;
 using System.Diagnostics;
 
 namespace LOM.Control;
+
+[GlobalClass]
 public partial class CameraFollow : Node
 {
 	/// <summary>

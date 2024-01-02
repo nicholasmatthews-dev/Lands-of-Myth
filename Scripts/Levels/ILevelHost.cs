@@ -2,6 +2,10 @@ using System.Threading.Tasks;
 
 namespace LOM.Levels;
 
+/// <summary>
+/// Represents a level host interface, implementing classes provide a way of retrieving 
+/// <see cref="LevelCell">s given <see cref="LevelCellRequest"/>s. 
+/// </summary>
 public interface ILevelHost {
     /// <summary>
     /// Attempts to get a level cell using the specified request. Will return a task which

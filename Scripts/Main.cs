@@ -7,9 +7,12 @@ using LOM.Multiplayer;
 using System.Threading;
 using System.Diagnostics;
 using LOM.Game;
+using LOM.UI;
 
 public partial class Main : Node2D
 {
+	private Node2D activeScene;
+	private MainMenu mainMenu;
 	private CameraFollow camera;
 	public static Movement movement;
 	private Node2D character;
@@ -21,9 +24,16 @@ public partial class Main : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		mainMenu = (MainMenu)ResourceLoader
+		.Load<PackedScene>("res://Scenes/UI/main_menu.tscn")
+		.Instantiate();
+
+		AddChild(mainMenu);
+		activeScene = mainMenu;
+		mainMenu.AssignSinglePlayerAction(MainMenuToSinglePlayer);
+		/*
 		CreateClientServer();
 
-		//tileSetManager = new TileSetManager();
 		camera = (CameraFollow)ResourceLoader
 		.Load<PackedScene>("res://Scenes/Characters/camera_follow.tscn")
 		.Instantiate();
@@ -48,11 +58,20 @@ public partial class Main : Node2D
 		AddChild(character);
 		AddChild(movement);
 		AddChild(camera);
+		*/
+
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+	public void MainMenuToSinglePlayer(){
+		SinglePlayerNode singlePlayerNode = new();
+		RemoveChild(activeScene);
+		activeScene = singlePlayerNode;
+		AddChild(activeScene);
 	}
 
 	public void CreateClientServer(){

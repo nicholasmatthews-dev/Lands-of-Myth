@@ -20,7 +20,15 @@ public interface ILevelHost {
     /// of.</param>
     public void SignalDispose(ILevelManager levelManager, LevelCellRequest request);
 
+    /// <summary>
+    /// Connects an <see cref="ILevelManager"/> which will use this object. 
+    /// </summary>
+    /// <param name="levelManager">The <see cref="ILevelManager"/> to connect.</param>
     public void ConnectManager(ILevelManager levelManager);
 
+    /// <summary>
+    /// Disconnects an <see cref="ILevelManager"/> from this object. 
+    /// </summary>
+    /// <param name="levelManager">The <see cref="ILevelManager"/> which wishes to disconnect.</param>
     public void DisconnectManager(ILevelManager levelManager);
 }

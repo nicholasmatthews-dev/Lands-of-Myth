@@ -197,10 +197,19 @@ public abstract partial class ENetService : RefCounted {
         }
     }
 
+    /// <summary>
+    /// Queues a packet to be sent out after the next service call.
+    /// </summary>
+    /// <param name="channel">The channel to broadcast on.</param>
+    /// <param name="peer">The peer to send the packet to.</param>
+    /// <param name="message">The packet to be sent.</param>
     public void QueueMessage(int channel, ENetPacketPeer peer, byte[] message){
         outgoingMessages.Enqueue((channel, peer, message));
     }
 
+    /// <summary>
+    /// Sends a queued message to its specified peer on its specified channel.
+    /// </summary>
     private void SendQueuedMessage(){
         if (outgoingMessages.TryDequeue(out (int, ENetPacketPeer, byte[]) entry)){
             if (Debugging) Debug.Print(GetType() + ": Sending queued message on channel " + entry.Item1

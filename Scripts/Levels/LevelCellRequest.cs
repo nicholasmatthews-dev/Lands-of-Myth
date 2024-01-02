@@ -53,7 +53,9 @@ public abstract class LevelCellRequest {
         + " and bytes.Length is " + bytes.Length);
         byte[] remaining = SerializationHelper.ReadBytes(bytes, bytes.Length - byteHead, ref byteHead);
         if (readRequestType == RequestType.WorldCell){
-            return WorldCellRequest.FromBytes(remaining);
+            WorldCellRequest output = WorldCellRequest.FromBytes(remaining);
+            output.requestStatus = readRequestStatus;
+            return output;
         }
         else {
             throw new Exception("LevelCellRequest: No matching request type found.");

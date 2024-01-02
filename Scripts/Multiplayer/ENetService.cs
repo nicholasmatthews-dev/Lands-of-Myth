@@ -202,7 +202,12 @@ public abstract partial class ENetService : RefCounted {
     }
 
     private void SendQueuedMessage(){
-        while (true){
+        if (outgoingMessages.TryDequeue(out (int, ENetPacketPeer, byte[]) entry)){
+            if (Debugging) Debug.Print(GetType() + ": Sending queued message on channel " + entry.Item1
+            + " to " + entry.Item2.GetRemoteAddress());
+            entry.Item2.Send(entry.Item1, entry.Item3, (int)ENetPacketPeer.FlagReliable);
+        }
+        /*while (true){
             if (outgoingMessages.TryDequeue(out (int, ENetPacketPeer, byte[]) entry)){
                 if (Debugging) Debug.Print(GetType() + ": Sending queued message on channel " + entry.Item1
                 + " to " + entry.Item2.GetRemoteAddress());
@@ -211,7 +216,6 @@ public abstract partial class ENetService : RefCounted {
             else {
                 break;
             }
-        }
-        
+        }*/
     }
 }

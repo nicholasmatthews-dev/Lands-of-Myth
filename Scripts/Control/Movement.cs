@@ -46,6 +46,10 @@ public partial class Movement : Node, IPositionUpdateSource
 
 	private HashSet<WeakReference<IPositionUpdateListener>> positionUpdateListeners = new();
 
+	private Queue<Vector2I> currentPath = new();
+	private int maxPathSize = 2;
+	private float inputRadius = 5;
+
 	private Vector2I PositionCoord = new(0,0);
 	private Vector2I DestinationCoord = new(0,0);
 	private Vector2 TopLeft;
@@ -62,7 +66,7 @@ public partial class Movement : Node, IPositionUpdateSource
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
-		if (Target.Position.IsEqualApprox(Destination)){
+		if ((Target.Position - Destination).Length() <= inputRadius){
 			HandleInput();
 		}
 		MoveToDestination(delta);
@@ -122,12 +126,12 @@ public partial class Movement : Node, IPositionUpdateSource
 		else if (Input.IsActionPressed("down")){
 			newDestinationCoord.Y += 1;
 		}
-		DestinationCoord = newDestinationCoord;
-		if (DestinationCoord != PositionCoord){
+		if (DestinationCoord != newDestinationCoord && currentPath.Count <= maxPathSize){
+			DestinationCoord = newDestinationCoord;
+			currentPath.Enqueue(newDestinationCoord);
+			Destination = GetWorldSpaceFromGrid(newDestinationCoord);
 			destinationReached = false;
 		}
-		Destination = new Vector2(DestinationCoord.X * TileWidth, DestinationCoord.Y * TileHeight)
-		- TopLeft;
 	}
 
 	/*
@@ -149,17 +153,32 @@ public partial class Movement : Node, IPositionUpdateSource
 	/// </summary>
 	/// <param name="delta">The time in seconds since the last frame.</param>
 	private void MoveToDestination(double delta){
-		Vector2 toDestination = Destination - Target.Position;
-		if (toDestination.Length() <= Speed * delta){
-			Target.Position = Destination;
-			PositionCoord = DestinationCoord;
-			if (!destinationReached){
+		float remainingLength = Speed * (float)delta;
+		while (remainingLength > 0){
+			if (currentPath.Count <= 0){
+				break;
+			}
+			Vector2I nextDestinationCoord = currentPath.Peek();
+			Vector2 nextDestination = GetWorldSpaceFromGrid(nextDestinationCoord);
+			Vector2 toDestination = nextDestination - Target.Position;
+			if (toDestination.Length() <= remainingLength){
+				Target.Position = nextDestination;
+				PositionCoord = nextDestinationCoord;
+				currentPath.Dequeue();
 				SignalPositionUpdate();
-				destinationReached = true;
+				if (!destinationReached && currentPath.Count <= 0){
+					destinationReached = true;
+				}
+				remainingLength -= toDestination.Length();
+			}
+			else {
+				Target.Position += toDestination.Normalized() * remainingLength;
+				remainingLength -= remainingLength;
 			}
 		}
-		else {
-			Target.Position += Target.Position.DirectionTo(Destination) * Speed * (float)delta;
-		}
+	}
+
+	private Vector2 GetWorldSpaceFromGrid(Vector2I gridCoords){
+		return new Vector2(gridCoords.X * TileWidth, gridCoords.Y * TileHeight) - TopLeft;
 	}
 }

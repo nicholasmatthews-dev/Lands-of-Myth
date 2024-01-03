@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Godot;
 using LOM.Levels;
 
@@ -12,6 +13,7 @@ public partial class SinglePlayerNode : Node2D {
         gameScene = (GameScene)ResourceLoader
         .Load<PackedScene>("res://Scenes/game_scene.tscn")
         .Instantiate();
+        Debug.Print(GetType() + ": Game scene loaded.");
         levelManagerNode = new(game.LevelManager, game.TileSetManager){
             Name = "LevelManager"
         };
@@ -19,5 +21,6 @@ public partial class SinglePlayerNode : Node2D {
         game.RegisterPostionUpdateSource(gameScene.Movement);
         AddChild(levelManagerNode);
         AddChild(gameScene);
+        Debug.Print(GetType() + ": Children added.");
     }
 }

@@ -68,10 +68,17 @@ public partial class Main : Node2D
 	}
 
 	public void MainMenuToSinglePlayer(){
+		Debug.Print(GetType() + ": Creating SinglePlayerNode...");
 		SinglePlayerNode singlePlayerNode = new();
+		Debug.Print(GetType() + ": SinglePlayerNode created.");
 		RemoveChild(activeScene);
+		Debug.Print(GetType() + ": Active scene removed.");
+		activeScene.QueueFree();
+		Debug.Print(GetType() + ": Active scene freed.");
 		activeScene = singlePlayerNode;
+		Debug.Print(GetType() + ": Active scene reassigned.");
 		AddChild(activeScene);
+		Debug.Print(GetType() + ": Active scene added as child.");
 	}
 
 	public void CreateClientServer(){

@@ -6,6 +6,7 @@ namespace LOM.UI;
 
 public partial class MainMenu : Node2D
 {
+	private bool _Disposed = false;
 	[Export]
 	public Button SinglePlayerButton;
 	public Action SinglePlayerAction;
@@ -34,4 +35,23 @@ public partial class MainMenu : Node2D
 			throw new ArgumentException(GetType() + ": Single player action already assigned.");
 		}
 	}
+
+    protected override void Dispose(bool disposing)
+    {
+		if (_Disposed){
+			return;
+		}
+		if (disposing){
+			Debug.Print(GetType() + ": Disposing of this instance.");
+			try {
+				SinglePlayerButton.Pressed -= SinglePlayerAction;
+				Debug.Print(GetType() + ": Action unassigned.");
+			}
+			catch (Exception e){
+				Debug.Print(GetType() + ": Error unassigning action. \"" + e.Message + "\"");
+			}
+			SinglePlayerAction = null;
+			base.Dispose(disposing);
+		}
+    }
 }
